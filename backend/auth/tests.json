@@ -1,0 +1,66 @@
+{
+  "tests": [
+    {
+      "name": "Register new user",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "action": "register",
+        "email": "test_betsport@example.com",
+        "username": "testplayer",
+        "password": "secret123"
+      },
+      "expectedStatus": 201,
+      "expectedBody": { "token": "string" },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Login with valid credentials",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "action": "login",
+        "email": "test_betsport@example.com",
+        "password": "secret123"
+      },
+      "expectedStatus": 200,
+      "expectedBody": { "token": "string" },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Login with wrong password",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "action": "login",
+        "email": "test_betsport@example.com",
+        "password": "wrongpass"
+      },
+      "expectedStatus": 401,
+      "expectedBody": { "error": "string" },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Register duplicate email",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "action": "register",
+        "email": "test_betsport@example.com",
+        "username": "testplayer2",
+        "password": "secret123"
+      },
+      "expectedStatus": 409,
+      "expectedBody": { "error": "string" },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Get me without token",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 401,
+      "expectedBody": { "error": "string" },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
