@@ -1,5 +1,5 @@
 """
-Авторизация и регистрация пользователей БетСпорт.
+Авторизация и регистрация пользователей БетСпорт. v2
 POST {action: "register"} — создать аккаунт
 POST {action: "login"}    — войти, получить токен
 GET  /                    — данные текущего пользователя (Bearer токен)
@@ -145,8 +145,11 @@ def handler(event: dict, context) -> dict:
                 )
                 row = cur.fetchone()
                 conn.commit()
-            except psycopg2.errors.UniqueViolation:
+            except psycopg2.Error as e:
                 conn.rollback()
+                err_str = str(e).lower()
+                if "unique" not in err_str and getattr(e, "pgcode", "") != "23505":
+                    raise
                 return {
                     "statusCode": 409,
                     "headers": CORS_HEADERS,
