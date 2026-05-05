@@ -48,3 +48,23 @@ export async function getBetHistory(limit = 20, offset = 0): Promise<{ bets: Pla
   if (!res.ok) throw new Error(data.error || "Ошибка загрузки истории");
   return data;
 }
+
+export interface SettleResult {
+  settled: number;
+  wins: number;
+  losses: number;
+  payout: number;
+  new_balance: number;
+}
+
+export async function settleBets(): Promise<SettleResult> {
+  const token = getToken();
+  const res = await fetch(BETS_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ action: "settle" }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Ошибка расчёта ставок");
+  return data;
+}

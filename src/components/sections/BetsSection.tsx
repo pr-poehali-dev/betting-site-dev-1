@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Icon from "@/components/ui/icon";
 import { useAuth } from "@/context/AuthContext";
-import { placeBet, BetItem } from "@/lib/bets";
+import { placeBet, settleBets, BetItem } from "@/lib/bets";
 import AuthModal from "@/components/AuthModal";
 
 const categories = ["Все", "Футбол", "Баскетбол", "Теннис", "Хоккей", "ММА"];
@@ -22,6 +22,13 @@ type BetStatus = "idle" | "loading" | "success" | "error";
 export default function BetsSection() {
   const { user, refreshUser } = useAuth();
   const [activeCategory, setActiveCategory] = useState("Все");
+
+  // При заходе в раздел ставок — расчитываем pending и обновляем баланс
+  useEffect(() => {
+    if (user) {
+      settleBets().then((r) => { if (r.settled > 0) refreshUser(); }).catch(() => {});
+    }
+  }, [user]);
   const [betSlip, setBetSlip] = useState<SlipItem[]>([]);
   const [betAmount, setBetAmount] = useState("500");
   const [status, setStatus] = useState<BetStatus>("idle");

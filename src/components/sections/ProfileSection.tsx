@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import Icon from "@/components/ui/icon";
 import { useAuth } from "@/context/AuthContext";
-import { getBetHistory, PlacedBet } from "@/lib/bets";
+import { getBetHistory, settleBets, PlacedBet } from "@/lib/bets";
 import AuthModal from "@/components/AuthModal";
 
 const tabs = ["Профиль", "История", "Финансы", "Настройки"];
@@ -29,19 +29,39 @@ const betStatusMap = {
 const PAGE_SIZE = 10;
 
 export default function ProfileSection() {
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const [activeTab, setActiveTab] = useState("Профиль");
   const [authModal, setAuthModal] = useState<"login" | "register" | null>(null);
   const [bets, setBets] = useState<PlacedBet[]>([]);
   const [betsTotal, setBetsTotal] = useState(0);
   const [betsLoading, setBetsLoading] = useState(false);
   const [betsPage, setBetsPage] = useState(0);
+  const [settleNotice, setSettleNotice] = useState<{ wins: number; losses: number; payout: number } | null>(null);
 
   useEffect(() => {
     if (activeTab === "История" && user) {
-      loadBets(0);
+      runSettleAndLoad();
+      // Автообновление каждые 30 секунд пока открыта история
+      const interval = setInterval(runSettleAndLoad, 30_000);
+      return () => clearInterval(interval);
     }
   }, [activeTab, user]);
+
+  const runSettleAndLoad = async () => {
+    setBetsLoading(true);
+    try {
+      // Сначала расчитываем pending-ставки
+      const result = await settleBets();
+      if (result.settled > 0) {
+        setSettleNotice({ wins: result.wins, losses: result.losses, payout: result.payout });
+        await refreshUser(); // обновляем баланс в хедере
+        setTimeout(() => setSettleNotice(null), 6000);
+      }
+    } catch {
+      // ignore
+    }
+    await loadBets(0);
+  };
 
   const loadBets = async (page: number) => {
     setBetsLoading(true);
@@ -206,6 +226,51 @@ export default function ProfileSection() {
       {/* История ставок из БД */}
       {activeTab === "История" && (
         <div className="space-y-3">
+
+          {/* Уведомление о расчёте ставок */}
+          {settleNotice && settleNotice.wins + settleNotice.losses > 0 && (
+            <div
+              className="rounded-xl p-4 flex items-start gap-3 animate-fade-in"
+              style={{
+                background: settleNotice.wins > 0
+                  ? "rgba(0,255,135,0.08)"
+                  : "rgba(255,59,59,0.08)",
+                border: `1px solid ${settleNotice.wins > 0 ? "rgba(0,255,135,0.25)" : "rgba(255,59,59,0.25)"}`,
+                animationFillMode: "forwards",
+              }}
+            >
+              <div className="flex-shrink-0 mt-0.5">
+                {settleNotice.wins > 0
+                  ? <Icon name="Trophy" size={20} className="text-neon-green" />
+                  : <Icon name="TrendingDown" size={20} className="text-red-400" />
+                }
+              </div>
+              <div>
+                <div className="font-oswald font-bold text-white text-sm mb-0.5">
+                  Расчёт ставок завершён
+                </div>
+                <div className="font-roboto text-xs text-gray-400 space-y-0.5">
+                  {settleNotice.wins > 0 && (
+                    <div className="text-neon-green">
+                      🏆 Выиграно: {settleNotice.wins} {settleNotice.wins === 1 ? "ставка" : "ставки"} · +{settleNotice.payout.toLocaleString("ru-RU", { maximumFractionDigits: 0 })} ₽ зачислено на баланс
+                    </div>
+                  )}
+                  {settleNotice.losses > 0 && (
+                    <div className="text-red-400">
+                      ❌ Проиграно: {settleNotice.losses} {settleNotice.losses === 1 ? "ставка" : "ставки"}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => setSettleNotice(null)}
+                className="ml-auto text-gray-600 hover:text-white flex-shrink-0"
+              >
+                <Icon name="X" size={14} />
+              </button>
+            </div>
+          )}
+
           {betsLoading ? (
             <div className="text-center py-12 text-gray-600">
               <Icon name="Loader" size={32} className="mx-auto animate-spin mb-3" />
