@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import Icon from "@/components/ui/icon";
 import { useAuth } from "@/context/AuthContext";
-import { getBetHistory, settleBets, PlacedBet } from "@/lib/bets";
+import { getBetHistory, PlacedBet } from "@/lib/bets";
+import { settleWithPush, getPermission, subscribe, unsubscribe, getVapidPublicKey, registerSW } from "@/lib/notifications";
 import AuthModal from "@/components/AuthModal";
 
 const tabs = ["Профиль", "История", "Финансы", "Настройки"];
@@ -37,11 +38,18 @@ export default function ProfileSection() {
   const [betsLoading, setBetsLoading] = useState(false);
   const [betsPage, setBetsPage] = useState(0);
   const [settleNotice, setSettleNotice] = useState<{ wins: number; losses: number; payout: number } | null>(null);
+  const [pushPermission, setPushPermission] = useState<string>("default");
+  const [pushLoading, setPushLoading] = useState(false);
+
+  // Инициализация: регистрируем SW и читаем статус разрешения
+  useEffect(() => {
+    registerSW();
+    setPushPermission(getPermission());
+  }, []);
 
   useEffect(() => {
     if (activeTab === "История" && user) {
       runSettleAndLoad();
-      // Автообновление каждые 30 секунд пока открыта история
       const interval = setInterval(runSettleAndLoad, 30_000);
       return () => clearInterval(interval);
     }
@@ -50,17 +58,35 @@ export default function ProfileSection() {
   const runSettleAndLoad = async () => {
     setBetsLoading(true);
     try {
-      // Сначала расчитываем pending-ставки
-      const result = await settleBets();
+      const result = await settleWithPush();
       if (result.settled > 0) {
         setSettleNotice({ wins: result.wins, losses: result.losses, payout: result.payout });
-        await refreshUser(); // обновляем баланс в хедере
+        await refreshUser();
         setTimeout(() => setSettleNotice(null), 6000);
       }
     } catch {
       // ignore
     }
     await loadBets(0);
+  };
+
+  const handlePushToggle = async () => {
+    setPushLoading(true);
+    try {
+      if (pushPermission === "granted") {
+        await unsubscribe();
+        setPushPermission("default");
+      } else {
+        const vapidKey = await getVapidPublicKey();
+        if (!vapidKey) return;
+        const ok = await subscribe(vapidKey);
+        setPushPermission(ok ? "granted" : getPermission());
+      }
+    } catch {
+      // ignore
+    } finally {
+      setPushLoading(false);
+    }
   };
 
   const loadBets = async (page: number) => {
@@ -344,10 +370,78 @@ export default function ProfileSection() {
         </div>
       )}
 
-      {(activeTab === "Финансы" || activeTab === "Настройки") && (
+      {activeTab === "Финансы" && (
         <div className="glass-card rounded-xl p-8 text-center" style={{ border: "1px solid #1A2430" }}>
           <Icon name="Construction" size={40} className="mx-auto text-gray-600 mb-3" />
           <p className="text-gray-500 font-roboto">Раздел в разработке</p>
+        </div>
+      )}
+
+      {activeTab === "Настройки" && (
+        <div className="space-y-3">
+          {/* Push-уведомления */}
+          <div className="glass-card rounded-xl p-5" style={{ border: "1px solid #1A2430" }}>
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ background: pushPermission === "granted" ? "rgba(0,255,135,0.1)" : "rgba(255,255,255,0.05)", border: `1px solid ${pushPermission === "granted" ? "rgba(0,255,135,0.3)" : "#1A2430"}` }}>
+                  <Icon name={pushPermission === "granted" ? "BellRing" : "Bell"} size={20}
+                    className={pushPermission === "granted" ? "text-neon-green" : "text-gray-500"} />
+                </div>
+                <div>
+                  <div className="font-oswald font-bold text-white text-sm">Уведомления о ставках</div>
+                  <div className="text-gray-500 text-xs font-roboto mt-0.5">
+                    {pushPermission === "granted"
+                      ? "Включены — ты получишь уведомление о результате даже если закроешь сайт"
+                      : pushPermission === "denied"
+                      ? "Заблокированы в настройках браузера — разреши в адресной строке"
+                      : "Выключены — включи чтобы узнавать о результатах ставок мгновенно"}
+                  </div>
+                </div>
+              </div>
+
+              {pushPermission !== "denied" && pushPermission !== "unsupported" && (
+                <button
+                  onClick={handlePushToggle}
+                  disabled={pushLoading}
+                  className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-lg font-oswald font-bold text-sm transition-all disabled:opacity-60 ${
+                    pushPermission === "granted"
+                      ? "border border-sport-border text-gray-400 hover:border-red-500/50 hover:text-red-400"
+                      : "bg-neon-green text-sport-dark"
+                  }`}
+                  style={pushPermission !== "granted" ? { boxShadow: "0 0 16px rgba(0,255,135,0.3)" } : {}}
+                >
+                  {pushLoading
+                    ? <Icon name="Loader" size={14} className="animate-spin" />
+                    : pushPermission === "granted"
+                    ? <><Icon name="BellOff" size={14} /> Выключить</>
+                    : <><Icon name="Bell" size={14} /> Включить</>
+                  }
+                </button>
+              )}
+
+              {pushPermission === "unsupported" && (
+                <span className="text-xs text-gray-600 font-roboto">Не поддерживается браузером</span>
+              )}
+            </div>
+
+            {pushPermission === "granted" && (
+              <div className="mt-3 pt-3 border-t border-sport-border flex items-center gap-2 text-xs text-gray-600 font-roboto">
+                <Icon name="Info" size={13} className="text-neon-green flex-shrink-0" />
+                Ставки рассчитываются через ~1 минуту после размещения
+              </div>
+            )}
+          </div>
+
+          <div className="glass-card rounded-xl p-5 opacity-50" style={{ border: "1px solid #1A2430" }}>
+            <div className="flex items-center gap-3">
+              <Icon name="Shield" size={20} className="text-gray-600" />
+              <div>
+                <div className="font-oswald font-bold text-white text-sm">Безопасность и пароль</div>
+                <div className="text-gray-600 text-xs font-roboto mt-0.5">В разработке</div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -1,0 +1,22 @@
+{
+  "tests": [
+    {
+      "name": "Subscribe without token",
+      "method": "POST",
+      "path": "/",
+      "body": { "action": "subscribe" },
+      "expectedStatus": 401,
+      "expectedBody": { "error": "string" },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Get vapid key",
+      "method": "POST",
+      "path": "/",
+      "body": { "action": "vapid_key" },
+      "expectedStatus": 401,
+      "expectedBody": { "error": "string" },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

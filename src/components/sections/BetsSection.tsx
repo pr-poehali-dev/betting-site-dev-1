@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import Icon from "@/components/ui/icon";
 import { useAuth } from "@/context/AuthContext";
-import { placeBet, settleBets, BetItem } from "@/lib/bets";
+import { placeBet, BetItem } from "@/lib/bets";
+import { settleWithPush } from "@/lib/notifications";
 import AuthModal from "@/components/AuthModal";
 
 const categories = ["Все", "Футбол", "Баскетбол", "Теннис", "Хоккей", "ММА"];
@@ -26,7 +27,7 @@ export default function BetsSection() {
   // При заходе в раздел ставок — расчитываем pending и обновляем баланс
   useEffect(() => {
     if (user) {
-      settleBets().then((r) => { if (r.settled > 0) refreshUser(); }).catch(() => {});
+      settleWithPush().then((r) => { if (r.settled > 0) refreshUser(); }).catch(() => {});
     }
   }, [user]);
   const [betSlip, setBetSlip] = useState<SlipItem[]>([]);
