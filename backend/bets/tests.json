@@ -1,0 +1,21 @@
+{
+  "tests": [
+    {
+      "name": "History without token",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 401,
+      "expectedBody": { "error": "string" },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Place bet without token",
+      "method": "POST",
+      "path": "/",
+      "body": { "action": "place", "amount": 100 },
+      "expectedStatus": 401,
+      "expectedBody": { "error": "string" },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
