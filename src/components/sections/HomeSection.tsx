@@ -49,6 +49,7 @@ export default function HomeSection({ onNav }: HomeSectionProps) {
   const { addBet, isSelected } = useBetSlip();
   const [topMatches, setTopMatches] = useState<SportEvent[]>([]);
   const [allEvents, setAllEvents] = useState<SportEvent[]>([]);
+  const [liveCount, setLiveCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -59,6 +60,11 @@ export default function HomeSection({ onNav }: HomeSectionProps) {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
+
+    // Получаем количество реальных live событий
+    getEvents(undefined, true, true)
+      .then((data) => setLiveCount(data.total))
+      .catch(() => setLiveCount(0));
   }, []);
 
   const countByCat = (cat: string) =>
@@ -85,7 +91,11 @@ export default function HomeSection({ onNav }: HomeSectionProps) {
           <div className="flex items-center gap-2">
             <span className="live-badge">LIVE</span>
             <span className="text-gray-400 text-sm font-roboto">
-              247 событий прямо сейчас
+              {liveCount === null
+                ? "Загружаем..."
+                : liveCount > 0
+                  ? `${liveCount} событий прямо сейчас`
+                  : `${allEvents.length} событий доступно`}
             </span>
           </div>
           <h1 className="font-oswald text-5xl md:text-6xl font-bold text-white leading-tight uppercase">
