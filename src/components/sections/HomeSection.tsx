@@ -1,4 +1,5 @@
 import Icon from "@/components/ui/icon";
+import PendingBetsWidget from "@/components/PendingBetsWidget";
 
 interface HomeSectionProps {
   onNav: (section: string) => void;
@@ -109,6 +110,9 @@ export default function HomeSection({ onNav }: HomeSectionProps) {
           ))}
         </div>
       </section>
+
+      {/* Активные ставки с таймером */}
+      <PendingBetsWidget onNav={onNav} />
 
       {/* Sports grid */}
       <section>
