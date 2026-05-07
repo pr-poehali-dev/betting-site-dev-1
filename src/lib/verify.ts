@@ -40,10 +40,12 @@ export async function getVerifyStatus(): Promise<VerifyStatus> {
 }
 
 export async function submitVerify(payload: VerifySubmit): Promise<{ success: boolean; message: string }> {
+  const token = getToken();
   const res = await fetch(VERIFY_URL, {
     method: "POST",
     headers: authHeaders(),
-    body: JSON.stringify({ action: "submit", ...payload }),
+    // Токен также передаём в теле — запасной вариант если заголовок не дошёл
+    body: JSON.stringify({ action: "submit", _token: token, ...payload }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || "Ошибка отправки");

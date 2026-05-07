@@ -28,11 +28,28 @@ def get_conn():
     return psycopg2.connect(os.environ["DATABASE_URL"])
 
 
-def get_user_id(event: dict) -> int:
+def get_user_id(event: dict, body: dict = None) -> int:
+    import sys
     headers = event.get("headers", {})
+    print(f"[verify] headers keys: {list(headers.keys())}", file=sys.stderr)
+
     # Платформа переименовывает Authorization → X-Authorization
-    auth = headers.get("X-Authorization", "") or headers.get("Authorization", "")
-    if not auth.startswith("Bearer "):
+    auth = (
+        headers.get("X-Authorization", "")
+        or headers.get("Authorization", "")
+        or headers.get("x-authorization", "")
+        or headers.get("authorization", "")
+    )
+
+    # Запасной вариант — токен в теле запроса
+    if (not auth or auth == "Bearer null") and body:
+        token_from_body = body.get("_token", "")
+        if token_from_body:
+            auth = f"Bearer {token_from_body}"
+
+    print(f"[verify] auth present: {bool(auth and auth != 'Bearer null' and len(auth) > 10)}", file=sys.stderr)
+
+    if not auth or not auth.startswith("Bearer "):
         raise PermissionError("Токен не передан")
     token = auth[7:].strip()
     if not token or token == "null":
@@ -70,12 +87,17 @@ def handler(event: dict, context) -> dict:
     if event.get("httpMethod") == "OPTIONS":
         return {"statusCode": 200, "headers": CORS, "body": ""}
 
+    import sys
+    method = event.get("httpMethod", "GET")
+    body_raw = event.get("body") or "{}"
+    body = json.loads(body_raw) if method == "POST" else {}
+
     try:
-        user_id = get_user_id(event)
-    except Exception:
+        user_id = get_user_id(event, body)
+    except Exception as e:
+        print(f"[verify] auth error: {e}", file=sys.stderr)
         return {"statusCode": 401, "headers": CORS, "body": json.dumps({"error": "Необходима авторизация"})}
 
-    method = event.get("httpMethod", "GET")
     conn = get_conn()
     cur = conn.cursor()
 
@@ -109,7 +131,6 @@ def handler(event: dict, context) -> dict:
         }
 
     # ── POST: подача заявки ──────────────────────────────────────
-    body = json.loads(event.get("body") or "{}")
     action = body.get("action", "")
 
     if action == "submit":
