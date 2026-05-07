@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Icon from "@/components/ui/icon";
 import { getVerifyStatus, submitVerify, fileToBase64, VerifyStatus } from "@/lib/verify";
 import { useAuth } from "@/context/AuthContext";
@@ -76,7 +76,7 @@ interface Props {
 }
 
 export default function VerificationForm({ onStatusChange }: Props) {
-  const { refreshUser } = useAuth();
+  const { refreshUser, user, loading: authLoading } = useAuth();
   const [status, setStatus] = useState<VerifyStatus | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -84,6 +84,7 @@ export default function VerificationForm({ onStatusChange }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [initialized, setInitialized] = useState(false);
 
   const [form, setForm] = useState({
     full_name: "", birth_date: "", doc_type: "passport", doc_number: "",
@@ -101,11 +102,25 @@ export default function VerificationForm({ onStatusChange }: Props) {
       setStatus({ status: "not_submitted" });
     } finally {
       setLoadingStatus(false);
+      setInitialized(true);
     }
   };
 
-  // Загружаем статус при первом показе
-  if (!status && !loadingStatus) { loadStatus(); return null; }
+  // Ждём пока AuthContext загрузится и user будет доступен
+  useEffect(() => {
+    if (!authLoading && user && !initialized && !loadingStatus) {
+      loadStatus();
+    }
+  }, [authLoading, user, initialized, loadingStatus]);
+
+  if (authLoading || (!initialized && !status)) {
+    return (
+      <div className="flex items-center gap-2 text-gray-500 text-sm font-roboto py-2">
+        <Icon name="Loader" size={14} className="animate-spin" />
+        Загрузка...
+      </div>
+    );
+  }
 
   const handleSubmit = async () => {
     setError("");
