@@ -106,31 +106,70 @@ export default function ProfileSection() {
   // Гость
   if (!user) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-6">
-        <div className="w-20 h-20 rounded-full bg-sport-surface border border-sport-border flex items-center justify-center">
-          <Icon name="User" size={40} className="text-gray-600" />
+      <>
+        <div className="glass-card rounded-2xl overflow-hidden" style={{ border: "1px solid #1A2430" }}>
+          {/* Верхняя полоса */}
+          <div className="h-1 w-full" style={{ background: "linear-gradient(90deg, #00FF87, #00B4FF)" }} />
+
+          <div className="flex flex-col items-center justify-center py-16 px-6 space-y-8">
+            {/* Иконка */}
+            <div className="relative">
+              <div className="w-24 h-24 rounded-full flex items-center justify-center"
+                style={{ background: "rgba(0,255,135,0.07)", border: "2px solid rgba(0,255,135,0.2)" }}>
+                <Icon name="User" size={44} className="text-gray-500" />
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-neon-green flex items-center justify-center">
+                <Icon name="Lock" size={13} className="text-sport-dark" />
+              </div>
+            </div>
+
+            {/* Текст */}
+            <div className="text-center space-y-2">
+              <h2 className="font-oswald text-3xl font-bold text-white uppercase tracking-wide">Личный кабинет</h2>
+              <p className="text-gray-500 font-roboto text-sm max-w-xs">
+                Войди или зарегистрируйся, чтобы делать ставки, следить за историей и получать бонусы
+              </p>
+            </div>
+
+            {/* Кнопки */}
+            <div className="flex flex-col sm:flex-row gap-3 w-full max-w-xs">
+              <button
+                onClick={() => setAuthModal("register")}
+                className="flex-1 py-3.5 bg-neon-green text-sport-dark font-oswald font-bold text-base rounded-xl uppercase tracking-wide transition-all hover:scale-[1.02]"
+                style={{ boxShadow: "0 0 24px rgba(0,255,135,0.35)" }}
+              >
+                Регистрация
+              </button>
+              <button
+                onClick={() => setAuthModal("login")}
+                className="flex-1 py-3.5 border border-sport-border text-white font-oswald font-bold text-base rounded-xl uppercase tracking-wide hover:border-neon-green hover:text-neon-green transition-all"
+              >
+                Войти
+              </button>
+            </div>
+
+            {/* Преимущества */}
+            <div className="grid grid-cols-3 gap-4 w-full max-w-sm pt-2">
+              {[
+                { icon: "Gift", label: "Бонус новичка", value: "500 ₽" },
+                { icon: "Zap", label: "Вывод средств", value: "15 мин" },
+                { icon: "Shield", label: "Безопасность", value: "SSL" },
+              ].map((f) => (
+                <div key={f.label} className="text-center">
+                  <div className="w-10 h-10 rounded-lg mx-auto mb-2 flex items-center justify-center"
+                    style={{ background: "rgba(0,255,135,0.07)", border: "1px solid rgba(0,255,135,0.15)" }}>
+                    <Icon name={f.icon} size={18} className="text-neon-green" />
+                  </div>
+                  <div className="font-oswald font-bold text-white text-sm">{f.value}</div>
+                  <div className="text-gray-600 text-xs font-roboto">{f.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
-        <div className="text-center">
-          <h2 className="font-oswald text-2xl font-bold text-white mb-2">Личный кабинет</h2>
-          <p className="text-gray-500 font-roboto">Войди или зарегистрируйся, чтобы получить доступ к кабинету</p>
-        </div>
-        <div className="flex gap-3">
-          <button
-            onClick={() => setAuthModal("login")}
-            className="px-6 py-2.5 border border-sport-border text-white font-oswald font-bold text-sm rounded-lg hover:border-neon-green transition-all"
-          >
-            Войти
-          </button>
-          <button
-            onClick={() => setAuthModal("register")}
-            className="px-6 py-2.5 bg-neon-green text-sport-dark font-oswald font-bold text-sm rounded-lg"
-            style={{ boxShadow: "0 0 16px rgba(0,255,135,0.3)" }}
-          >
-            Зарегистрироваться
-          </button>
-        </div>
+
         {authModal && <AuthModal defaultTab={authModal} onClose={() => setAuthModal(null)} />}
-      </div>
+      </>
     );
   }
 
