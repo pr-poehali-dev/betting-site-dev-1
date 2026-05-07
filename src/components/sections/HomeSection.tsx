@@ -1,5 +1,7 @@
+import { useState, useEffect } from "react";
 import Icon from "@/components/ui/icon";
 import PendingBetsWidget from "@/components/PendingBetsWidget";
+import { getEvents, SportEvent } from "@/lib/events";
 
 interface HomeSectionProps {
   onNav: (section: string) => void;
@@ -23,34 +25,39 @@ const sports = [
   { emoji: "🏎️", name: "Автоспорт", count: "95" },
 ];
 
-const topMatches = [
-  {
-    league: "Примера · Испания",
-    home: "Реал Мадрид",
-    away: "Барселона",
-    time: "Сег. 21:45",
-    odds: { w1: "2.10", x: "3.40", w2: "3.60" },
-    hot: true,
-  },
-  {
-    league: "АПЛ · Англия",
-    home: "Манчестер Сити",
-    away: "Арсенал",
-    time: "Сег. 19:30",
-    odds: { w1: "1.75", x: "3.80", w2: "4.20" },
-    hot: false,
-  },
-  {
-    league: "Серия А · Италия",
-    home: "Интер",
-    away: "Ювентус",
-    time: "Завтра 21:00",
-    odds: { w1: "2.45", x: "3.20", w2: "2.90" },
-    hot: false,
-  },
-];
+function MatchSkeleton() {
+  return (
+    <div className="glass-card rounded-lg p-4 animate-pulse" style={{ border: "1px solid #1A2430" }}>
+      <div className="flex justify-between mb-3">
+        <div className="h-3 w-36 bg-sport-border rounded" />
+        <div className="h-3 w-16 bg-sport-border rounded" />
+      </div>
+      <div className="flex justify-between items-center">
+        <div className="h-4 w-44 bg-sport-border rounded" />
+        <div className="flex gap-2">
+          <div className="h-8 w-16 bg-sport-border rounded-lg" />
+          <div className="h-8 w-16 bg-sport-border rounded-lg hidden sm:block" />
+          <div className="h-8 w-16 bg-sport-border rounded-lg" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function HomeSection({ onNav }: HomeSectionProps) {
+  const [topMatches, setTopMatches] = useState<SportEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getEvents()
+      .then((data) => {
+        // Берём первые 5 матчей — они будут топом
+        setTopMatches(data.events.slice(0, 5));
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
   return (
     <div className="space-y-8">
       {/* Hero */}
@@ -150,35 +157,44 @@ export default function HomeSection({ onNav }: HomeSectionProps) {
           </button>
         </div>
         <div className="space-y-2">
-          {topMatches.map((match, i) => (
-            <div key={i} className="glass-card rounded-lg p-4 neon-border">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-500 text-xs font-roboto">
-                    {match.league}
-                  </span>
-                  {match.hot && (
-                    <span className="text-xs bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-1.5 py-0.5 rounded font-oswald">
-                      🔥 ТОП
-                    </span>
-                  )}
-                </div>
-                <span className="text-gray-500 text-xs">{match.time}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="font-oswald text-sm md:text-base font-medium text-white">
-                  <span>{match.home}</span>
-                  <span className="text-gray-600 mx-2">—</span>
-                  <span>{match.away}</span>
-                </div>
-                <div className="flex gap-2">
-                  <button className="odds-btn">П1 {match.odds.w1}</button>
-                  <button className="odds-btn hidden sm:block">X {match.odds.x}</button>
-                  <button className="odds-btn">П2 {match.odds.w2}</button>
-                </div>
-              </div>
+          {loading ? (
+            Array.from({ length: 3 }).map((_, i) => <MatchSkeleton key={i} />)
+          ) : topMatches.length === 0 ? (
+            <div className="glass-card rounded-lg p-8 text-center" style={{ border: "1px solid #1A2430" }}>
+              <p className="text-gray-500 font-roboto text-sm">Матчи загружаются...</p>
             </div>
-          ))}
+          ) : (
+            topMatches.map((match, i) => (
+              <div key={match.id} className="glass-card rounded-lg p-4 neon-border cursor-pointer" onClick={() => onNav("bets")}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">{match.sport}</span>
+                    <span className="text-gray-500 text-xs font-roboto">{match.league}</span>
+                    {i === 0 && (
+                      <span className="text-xs bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-1.5 py-0.5 rounded font-oswald">
+                        🔥 ТОП
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-gray-500 text-xs">{match.date}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="font-oswald text-sm md:text-base font-medium text-white">
+                    <span>{match.home}</span>
+                    <span className="text-gray-600 mx-2">—</span>
+                    <span>{match.away}</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <button className="odds-btn" onClick={(e) => { e.stopPropagation(); onNav("bets"); }}>П1 {match.odds.w1}</button>
+                    {match.odds.x && (
+                      <button className="odds-btn hidden sm:block" onClick={(e) => { e.stopPropagation(); onNav("bets"); }}>X {match.odds.x}</button>
+                    )}
+                    <button className="odds-btn" onClick={(e) => { e.stopPropagation(); onNav("bets"); }}>П2 {match.odds.w2}</button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </section>
 
