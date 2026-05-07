@@ -13,6 +13,13 @@ export interface EventMarket {
   outcomes: MarketOutcome[];
 }
 
+export interface LiveData {
+  home_score: string;
+  away_score: string;
+  period: string;
+  last_update: string;
+}
+
 export interface SportEvent {
   id: string;
   sport: string;
@@ -25,6 +32,7 @@ export interface SportEvent {
   odds: { w1: number | null; x: number | null; w2: number | null };
   markets?: EventMarket[];
   is_live: boolean;
+  live_data?: LiveData;
 }
 
 export interface EventsResponse {

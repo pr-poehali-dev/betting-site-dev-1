@@ -608,6 +608,87 @@ def parse_event(raw: dict, sport_meta: dict) -> dict | None:
     }
 
 
+def fetch_live_scores(sport_key: str, api_key: str) -> list:
+    """Получает текущие live-счета через /scores/ endpoint."""
+    url = f"https://api.the-odds-api.com/v4/sports/{sport_key}/scores/?apiKey={api_key}&daysFrom=1"
+    req = urllib.request.Request(url, headers={"User-Agent": "BetSport/1.0"})
+    with urllib.request.urlopen(req, timeout=8) as resp:
+        return json.loads(resp.read().decode())
+
+
+def fetch_live_events(api_key: str) -> list:
+    """Получает реальные live события с текущим счётом."""
+    import sys
+    live_events = []
+
+    for sport_key, meta in SPORTS_MAP.items():
+        try:
+            scores_data = fetch_live_scores(sport_key, api_key)
+            in_play = [s for s in scores_data if s.get("completed") is False and s.get("scores")]
+            if not in_play:
+                continue
+
+            print(f"[live] {sport_key}: {len(in_play)} in-play events", file=sys.stderr)
+
+            # Получаем коэффициенты для этих матчей
+            try:
+                odds_data = fetch_odds_api(sport_key, api_key, market="h2h", live=True)
+                odds_by_id = {o["id"]: o for o in odds_data}
+            except Exception:
+                odds_by_id = {}
+
+            for score_event in in_play[:5]:
+                eid = score_event.get("id", "")
+                home_en = score_event.get("home_team", "")
+                away_en = score_event.get("away_team", "")
+
+                # Парсим текущий счёт
+                scores = score_event.get("scores") or []
+                score_map = {s["name"]: s["score"] for s in scores if s.get("name") and s.get("score")}
+                home_score = score_map.get(home_en, "0")
+                away_score = score_map.get(away_en, "0")
+
+                # Время матча
+                last_update = score_event.get("last_update", "")
+                period = score_event.get("period", "")
+
+                # Коэффициенты из live odds (если есть)
+                odds = {"w1": None, "x": None, "w2": None}
+                api_markets = []
+                if eid in odds_by_id:
+                    parsed_event = parse_event(odds_by_id[eid], meta)
+                    if parsed_event:
+                        odds = parsed_event["odds"]
+                        api_markets = parsed_event.get("markets", [])
+
+                live_events.append({
+                    "id": eid,
+                    "sport": meta["emoji"],
+                    "category": meta["category"],
+                    "league": meta["name"],
+                    "home": translate_team(home_en),
+                    "away": translate_team(away_en),
+                    "date": "Live",
+                    "commence_time": score_event.get("commence_time", ""),
+                    "odds": odds,
+                    "markets": api_markets,
+                    "is_live": True,
+                    "live_data": {
+                        "home_score": home_score,
+                        "away_score": away_score,
+                        "period": period,
+                        "last_update": last_update,
+                    },
+                })
+
+        except Exception as e:
+            print(f"[live] {sport_key} error: {e}", file=sys.stderr)
+            continue
+
+    print(f"[live] total: {len(live_events)}", file=sys.stderr)
+    return live_events
+
+
 def fetch_all_events(api_key: str, live: bool = False) -> list:
     import sys
     events = []
@@ -693,9 +774,13 @@ def handler(event: dict, context) -> dict:
     events_list = []
     if api_key:
         try:
-            events_list = fetch_all_events(api_key, live=live_only)
-        except Exception:
-            pass
+            if live_only:
+                events_list = fetch_live_events(api_key)
+            else:
+                events_list = fetch_all_events(api_key, live=False)
+        except Exception as e:
+            import sys
+            print(f"[events] fetch error: {e}", file=sys.stderr)
 
     # Если API не дал результатов — используем fallback
     if not events_list:
