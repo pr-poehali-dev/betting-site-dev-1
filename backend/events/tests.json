@@ -1,0 +1,28 @@
+{
+  "tests": [
+    {
+      "name": "Get all events",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": {"events": [], "total": 0},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Get football events",
+      "method": "GET",
+      "path": "/?sport=Футбол",
+      "expectedStatus": 200,
+      "expectedBody": {"total": 0},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Get live events",
+      "method": "GET",
+      "path": "/?live=1",
+      "expectedStatus": 200,
+      "expectedBody": {"events": []},
+      "bodyMatcher": "partial"
+    }
+  ]
+}
