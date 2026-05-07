@@ -22,7 +22,19 @@ const mobileNav = [
 
 export default function Index() {
   const [section, setSection] = useState("home");
-  const { pendingCount } = useAuth();
+  const { pendingCount, loading } = useAuth();
+
+  // Ждём проверки токена — не мигаем экраном гостя
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-sport-dark flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 rounded-full border-2 border-neon-green border-t-transparent animate-spin" />
+          <span className="text-gray-600 text-sm font-roboto">Загрузка...</span>
+        </div>
+      </div>
+    );
+  }
 
   const renderSection = () => {
     switch (section) {
