@@ -53,15 +53,17 @@ interface Props {
 }
 
 export default function PendingBetsWidget({ onNav }: Props) {
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, setPendingCount } = useAuth();
   const [pending, setPending] = useState<PlacedBet[]>([]);
   const [settled, setSettled] = useState<{ wins: number; losses: number; payout: number } | null>(null);
 
   const load = useCallback(async () => {
     if (!user) return;
     const { bets } = await getBetHistory(50, 0).catch(() => ({ bets: [] as PlacedBet[], total: 0 }));
-    setPending(bets.filter((b) => b.status === "pending"));
-  }, [user]);
+    const p = bets.filter((b) => b.status === "pending");
+    setPending(p);
+    setPendingCount(p.length);
+  }, [user, setPendingCount]);
 
   const trySettle = useCallback(async () => {
     if (!user) return;

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
 import Header from "@/components/Header";
 import TickerBar from "@/components/TickerBar";
 import HomeSection from "@/components/sections/HomeSection";
@@ -20,6 +21,7 @@ const mobileNav = [
 
 export default function Index() {
   const [section, setSection] = useState("home");
+  const { pendingCount } = useAuth();
 
   const renderSection = () => {
     switch (section) {
@@ -91,6 +93,14 @@ export default function Index() {
                 <Icon name={item.icon} size={20} fallback="Circle" />
                 {item.id === "live" && (
                   <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                )}
+                {item.id === "bets" && pendingCount > 0 && (
+                  <span
+                    className="absolute -top-1.5 -right-2 min-w-[16px] h-4 rounded-full flex items-center justify-center text-[10px] font-oswald font-bold text-sport-dark px-1"
+                    style={{ background: "#00FF87", boxShadow: "0 0 6px rgba(0,255,135,0.6)" }}
+                  >
+                    {pendingCount > 9 ? "9+" : pendingCount}
+                  </span>
                 )}
               </div>
               <span className="text-xs font-oswald">{item.label}</span>

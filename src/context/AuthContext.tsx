@@ -7,6 +7,8 @@ interface AuthContextType {
   login: (token: string, user: User) => void;
   logout: () => void;
   refreshUser: () => Promise<void>;
+  pendingCount: number;
+  setPendingCount: (n: number) => void;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -14,6 +16,7 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
     const token = getToken();
@@ -35,6 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     clearToken();
     setUser(null);
+    setPendingCount(0);
   };
 
   const refreshUser = async () => {
@@ -43,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, refreshUser, pendingCount, setPendingCount }}>
       {children}
     </AuthContext.Provider>
   );
