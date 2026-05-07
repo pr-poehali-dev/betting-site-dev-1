@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { register, login } from "@/lib/auth";
 import { useAuth } from "@/context/AuthContext";
 import Icon from "@/components/ui/icon";
@@ -14,6 +14,12 @@ export default function AuthModal({ onClose, defaultTab = "login" }: AuthModalPr
   const [form, setForm] = useState({ email: "", username: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Блокируем скролл страницы пока модалка открыта
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, []);
 
   const set = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -38,11 +44,10 @@ export default function AuthModal({ onClose, defaultTab = "login" }: AuthModalPr
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-y-auto"
-      style={{ background: "rgba(8,12,16,0.85)", backdropFilter: "blur(8px)" }}
+      className="fixed inset-0 z-[200] flex items-center justify-center p-4"
+      style={{ background: "rgba(8,12,16,0.92)", backdropFilter: "blur(10px)" }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
-      <div className="flex-1 flex items-center justify-center min-h-full py-4">
       <div
         className="w-full max-w-md rounded-2xl p-8 relative animate-fade-in"
         style={{
@@ -78,9 +83,7 @@ export default function AuthModal({ onClose, defaultTab = "login" }: AuthModalPr
               key={t}
               onClick={() => { setTab(t); setError(""); }}
               className={`flex-1 py-2.5 font-oswald font-bold text-sm uppercase tracking-wide transition-all ${
-                tab === t
-                  ? "bg-neon-green text-sport-dark"
-                  : "text-gray-500 hover:text-white"
+                tab === t ? "bg-neon-green text-sport-dark" : "text-gray-500 hover:text-white"
               }`}
             >
               {t === "login" ? "Войти" : "Регистрация"}
@@ -161,7 +164,6 @@ export default function AuthModal({ onClose, defaultTab = "login" }: AuthModalPr
             </button>
           )}
         </div>
-      </div>
       </div>
     </div>
   );
