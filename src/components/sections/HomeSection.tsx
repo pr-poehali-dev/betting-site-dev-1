@@ -14,15 +14,15 @@ const stats = [
   { value: "24/7", label: "Поддержка", icon: "Headphones" },
 ];
 
-const sports = [
-  { emoji: "⚽", name: "Футбол", count: "2 340" },
-  { emoji: "🏀", name: "Баскетбол", count: "890" },
-  { emoji: "🎾", name: "Теннис", count: "1 200" },
-  { emoji: "🏒", name: "Хоккей", count: "450" },
-  { emoji: "🏈", name: "Американский футбол", count: "320" },
-  { emoji: "🥊", name: "Бокс / ММА", count: "180" },
-  { emoji: "🏐", name: "Волейбол", count: "280" },
-  { emoji: "🏎️", name: "Автоспорт", count: "95" },
+const SPORTS_LIST = [
+  { emoji: "⚽", name: "Футбол",               category: "Футбол" },
+  { emoji: "🏀", name: "Баскетбол",            category: "Баскетбол" },
+  { emoji: "🎾", name: "Теннис",               category: "Теннис" },
+  { emoji: "🏒", name: "Хоккей",               category: "Хоккей" },
+  { emoji: "🏈", name: "Американский футбол",  category: "Американский футбол" },
+  { emoji: "🥊", name: "Бокс / ММА",           category: "ММА" },
+  { emoji: "🏐", name: "Волейбол",             category: "Волейбол" },
+  { emoji: "🏎️", name: "Автоспорт",           category: "Автоспорт" },
 ];
 
 function MatchSkeleton() {
@@ -46,17 +46,26 @@ function MatchSkeleton() {
 
 export default function HomeSection({ onNav }: HomeSectionProps) {
   const [topMatches, setTopMatches] = useState<SportEvent[]>([]);
+  const [allEvents, setAllEvents] = useState<SportEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     getEvents()
       .then((data) => {
-        // Берём первые 5 матчей — они будут топом
         setTopMatches(data.events.slice(0, 5));
+        setAllEvents(data.events);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  const countByCat = (cat: string) =>
+    allEvents.filter((e) => e.category === cat).length;
+
+  const sports = SPORTS_LIST.map((s) => ({
+    ...s,
+    count: loading ? null : countByCat(s.category),
+  }));
 
   return (
     <div className="space-y-8">
@@ -138,7 +147,15 @@ export default function HomeSection({ onNav }: HomeSectionProps) {
                 <div className="font-oswald text-sm font-medium text-white group-hover:text-neon-green transition-colors">
                   {sport.name}
                 </div>
-                <div className="text-gray-500 text-xs">{sport.count} событий</div>
+                <div className="text-gray-500 text-xs">
+                  {sport.count === null ? (
+                    <span className="inline-block w-8 h-2.5 bg-sport-border rounded animate-pulse" />
+                  ) : sport.count > 0 ? (
+                    <span className="text-neon-green/80">{sport.count} событий</span>
+                  ) : (
+                    <span>нет событий</span>
+                  )}
+                </div>
               </div>
             </button>
           ))}
