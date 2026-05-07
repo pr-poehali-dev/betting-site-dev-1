@@ -38,10 +38,11 @@ export default function AuthModal({ onClose, defaultTab = "login" }: AuthModalPr
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-y-auto"
       style={{ background: "rgba(8,12,16,0.85)", backdropFilter: "blur(8px)" }}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
+      <div className="flex-1 flex items-center justify-center min-h-full py-4">
       <div
         className="w-full max-w-md rounded-2xl p-8 relative animate-fade-in"
         style={{
@@ -160,6 +161,7 @@ export default function AuthModal({ onClose, defaultTab = "login" }: AuthModalPr
             </button>
           )}
         </div>
+      </div>
       </div>
     </div>
   );
