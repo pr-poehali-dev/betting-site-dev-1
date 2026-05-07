@@ -20,10 +20,11 @@ export interface EventsResponse {
   updated_at: number;
 }
 
-export async function getEvents(sport?: string, live?: boolean): Promise<EventsResponse> {
+export async function getEvents(sport?: string, live?: boolean, forceRefresh?: boolean): Promise<EventsResponse> {
   const params = new URLSearchParams();
   if (sport) params.set("sport", sport);
   if (live) params.set("live", "1");
+  if (forceRefresh) params.set("refresh", "1");
   const query = params.toString();
   const res = await fetch(`${EVENTS_URL}${query ? "?" + query : ""}`);
   const data = await res.json();

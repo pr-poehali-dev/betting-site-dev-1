@@ -180,19 +180,22 @@ def parse_event(raw: dict, sport_meta: dict) -> dict | None:
 
 
 def fetch_all_events(api_key: str, live: bool = False) -> list:
+    import sys
     events = []
-    # Пробуем получить события для каждого вида спорта
     for sport_key, meta in SPORTS_MAP.items():
         try:
             raw_events = fetch_odds_api(sport_key, api_key, live=live)
-            for raw in raw_events[:6]:  # максимум 6 событий на вид спорта
+            print(f"[events] {sport_key}: got {len(raw_events)} events", file=sys.stderr)
+            for raw in raw_events[:6]:
                 parsed = parse_event(raw, meta)
                 if parsed:
                     events.append(parsed)
-        except Exception:
+        except Exception as e:
+            print(f"[events] {sport_key} error: {e}", file=sys.stderr)
             continue
         if len(events) >= 50:
             break
+    print(f"[events] total parsed: {len(events)}", file=sys.stderr)
     return events
 
 
@@ -201,11 +204,14 @@ def handler(event: dict, context) -> dict:
     if event.get("httpMethod") == "OPTIONS":
         return {"statusCode": 200, "headers": CORS, "body": ""}
 
+    import sys
     params = event.get("queryStringParameters") or {}
     sport_filter = params.get("sport", "")
     live_only = params.get("live", "0") == "1"
+    force_refresh = params.get("refresh", "0") == "1"
 
     api_key = os.environ.get("THE_ODDS_API_KEY", "")
+    print(f"[events] api_key present: {bool(api_key)}, live={live_only}, refresh={force_refresh}", file=sys.stderr)
 
     conn = get_conn()
     cur = conn.cursor()
@@ -216,7 +222,7 @@ def handler(event: dict, context) -> dict:
     cache_key = f"events_{'live' if live_only else 'line'}_{sport_filter or 'all'}"
     ttl = 120 if live_only else 600  # live кэш 2 мин, обычный 10 мин
 
-    cached = get_cache(cur, cache_key, ttl)
+    cached = get_cache(cur, cache_key, ttl) if not force_refresh else None
     if cached:
         cur.close()
         conn.close()
@@ -238,10 +244,11 @@ def handler(event: dict, context) -> dict:
     if sport_filter:
         events_list = [e for e in events_list if e["category"] == sport_filter]
 
+    is_real = bool(api_key and events_list and not events_list[0].get("id", "").startswith("fb"))
     result = {
         "events": events_list,
         "total": len(events_list),
-        "is_real": bool(api_key and events_list and events_list[0].get("id", "").startswith("fb") is False),
+        "is_real": is_real,
         "updated_at": time.time(),
     }
 

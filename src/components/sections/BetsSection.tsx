@@ -39,9 +39,9 @@ export default function BetsSection() {
   const [isReal, setIsReal] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  const loadEvents = useCallback(async () => {
+  const loadEvents = useCallback(async (force = false) => {
     try {
-      const data = await getEvents();
+      const data = await getEvents(undefined, undefined, force);
       setEvents(data.events);
       setIsReal(data.is_real);
       setLastUpdated(new Date());
@@ -127,7 +127,7 @@ export default function BetsSection() {
             </span>
           )}
           {lastUpdated && (
-            <button onClick={loadEvents} className="text-gray-600 hover:text-gray-400 transition-colors" title="Обновить">
+            <button onClick={() => loadEvents(true)} className="text-gray-600 hover:text-gray-400 transition-colors" title="Обновить">
               <Icon name="RefreshCw" size={14} />
             </button>
           )}
