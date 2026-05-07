@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Icon from "@/components/ui/icon";
 import { useAuth } from "@/context/AuthContext";
+import AuthModal from "@/components/AuthModal";
 
 interface HeaderProps {
   activeSection: string;
@@ -18,7 +19,8 @@ const navItems = [
 
 export default function Header({ activeSection, onNav }: HeaderProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { pendingCount } = useAuth();
+  const [authModal, setAuthModal] = useState<"login" | "register" | null>(null);
+  const { user, pendingCount } = useAuth();
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 glass-card border-b border-sport-border">
@@ -63,20 +65,33 @@ export default function Header({ activeSection, onNav }: HeaderProps) {
 
         {/* Right actions */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => onNav("profile")}
-            className="hidden md:flex items-center gap-2 odds-btn"
-          >
-            <Icon name="User" size={14} />
-            Войти
-          </button>
-          <button
-            onClick={() => onNav("profile")}
-            className="hidden md:flex items-center gap-2 px-4 py-1.5 bg-neon-green text-sport-dark font-oswald font-bold text-sm rounded transition-all hover:shadow-lg"
-            style={{ boxShadow: "0 0 12px rgba(0,255,135,0.3)" }}
-          >
-            Регистрация
-          </button>
+          {user ? (
+            <button
+              onClick={() => onNav("profile")}
+              className="hidden md:flex items-center gap-2 px-4 py-1.5 bg-neon-green text-sport-dark font-oswald font-bold text-sm rounded transition-all hover:shadow-lg"
+              style={{ boxShadow: "0 0 12px rgba(0,255,135,0.3)" }}
+            >
+              <Icon name="User" size={14} />
+              {user.username}
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={() => setAuthModal("login")}
+                className="hidden md:flex items-center gap-2 odds-btn"
+              >
+                <Icon name="User" size={14} />
+                Войти
+              </button>
+              <button
+                onClick={() => setAuthModal("register")}
+                className="hidden md:flex items-center gap-2 px-4 py-1.5 bg-neon-green text-sport-dark font-oswald font-bold text-sm rounded transition-all hover:shadow-lg"
+                style={{ boxShadow: "0 0 12px rgba(0,255,135,0.3)" }}
+              >
+                Регистрация
+              </button>
+            </>
+          )}
           <button
             className="md:hidden text-gray-400 hover:text-neon-green transition-colors"
             onClick={() => setMobileOpen(!mobileOpen)}
@@ -85,6 +100,10 @@ export default function Header({ activeSection, onNav }: HeaderProps) {
           </button>
         </div>
       </div>
+
+      {authModal && (
+        <AuthModal defaultTab={authModal} onClose={() => setAuthModal(null)} />
+      )}
 
       {/* Mobile menu */}
       {mobileOpen && (
@@ -103,10 +122,12 @@ export default function Header({ activeSection, onNav }: HeaderProps) {
                 {item.label}
               </button>
             ))}
+          {!user && (
             <div className="flex gap-2 mt-2 px-3">
-              <button className="flex-1 odds-btn text-center">Войти</button>
-              <button className="flex-1 py-1.5 bg-neon-green text-sport-dark font-oswald font-bold text-sm rounded">Регистрация</button>
+              <button onClick={() => { setAuthModal("login"); setMobileOpen(false); }} className="flex-1 odds-btn text-center">Войти</button>
+              <button onClick={() => { setAuthModal("register"); setMobileOpen(false); }} className="flex-1 py-1.5 bg-neon-green text-sport-dark font-oswald font-bold text-sm rounded">Регистрация</button>
             </div>
+          )}
           </nav>
         </div>
       )}
