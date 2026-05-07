@@ -10,6 +10,7 @@ import ProfileSection from "@/components/sections/ProfileSection";
 import HistorySection from "@/components/sections/HistorySection";
 import PromoSection from "@/components/sections/PromoSection";
 import SupportSection from "@/components/sections/SupportSection";
+import FloatingBetSlip from "@/components/FloatingBetSlip";
 import Icon from "@/components/ui/icon";
 
 const mobileNav = [
@@ -78,6 +79,8 @@ export default function Index() {
           </div>
         </div>
       </footer>
+
+      {section !== "bets" && <FloatingBetSlip onOpen={() => setSection("bets")} />}
 
       <nav className="fixed bottom-0 left-0 right-0 md:hidden glass-card border-t border-sport-border z-50">
         <div className="flex">

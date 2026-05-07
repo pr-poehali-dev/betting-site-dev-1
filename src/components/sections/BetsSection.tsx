@@ -4,11 +4,10 @@ import { useAuth } from "@/context/AuthContext";
 import { placeBet, BetItem } from "@/lib/bets";
 import { settleWithPush } from "@/lib/notifications";
 import { getEvents, SportEvent } from "@/lib/events";
+import { useBetSlip } from "@/context/BetSlipContext";
 import AuthModal from "@/components/AuthModal";
 
 const categories = ["Все", "Футбол", "Баскетбол", "Теннис", "Хоккей", "ММА"];
-
-interface SlipItem { eventId: string; type: string; odds: string; name: string; league: string; sport: string }
 
 type BetStatus = "idle" | "loading" | "success" | "error";
 
@@ -33,11 +32,17 @@ function EventSkeleton() {
 
 export default function BetsSection() {
   const { user, refreshUser } = useAuth();
+  const { betSlip, addBet, removeBet, clearSlip, isSelected } = useBetSlip();
+
   const [activeCategory, setActiveCategory] = useState("Все");
   const [events, setEvents] = useState<SportEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [isReal, setIsReal] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [betAmount, setBetAmount] = useState("500");
+  const [status, setStatus] = useState<BetStatus>("idle");
+  const [statusMsg, setStatusMsg] = useState("");
+  const [authModal, setAuthModal] = useState(false);
 
   const loadEvents = useCallback(async (force = false) => {
     try {
@@ -54,7 +59,6 @@ export default function BetsSection() {
 
   useEffect(() => {
     loadEvents();
-    // Обновляем каждые 5 минут
     const interval = setInterval(loadEvents, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [loadEvents]);
@@ -65,23 +69,7 @@ export default function BetsSection() {
     }
   }, [user]);
 
-  const [betSlip, setBetSlip] = useState<SlipItem[]>([]);
-  const [betAmount, setBetAmount] = useState("500");
-  const [status, setStatus] = useState<BetStatus>("idle");
-  const [statusMsg, setStatusMsg] = useState("");
-  const [authModal, setAuthModal] = useState(false);
-
   const filtered = activeCategory === "Все" ? events : events.filter((e) => e.category === activeCategory);
-
-  const addBet = (eventId: string, type: string, odds: string, name: string, league: string, sport: string) => {
-    setBetSlip((prev) => {
-      const exists = prev.find((b) => b.eventId === eventId && b.type === type);
-      if (exists) return prev.filter((b) => !(b.eventId === eventId && b.type === type));
-      const filtered = prev.filter((b) => b.eventId !== eventId);
-      return [...filtered, { eventId, type, odds, name, league, sport }];
-    });
-    setStatus("idle");
-  };
 
   const totalOdds = betSlip.reduce((acc, b) => acc * parseFloat(b.odds), 1);
   const amount = parseFloat(betAmount || "0");
@@ -106,7 +94,7 @@ export default function BetsSection() {
 
       const result = await placeBet(betsPayload, amount);
       await refreshUser();
-      setBetSlip([]);
+      clearSlip();
       setStatus("success");
       setStatusMsg(`Ставка принята! Возможный выигрыш: ${result.potential_win.toLocaleString("ru-RU", { maximumFractionDigits: 0 })} ₽`);
     } catch (e: unknown) {
@@ -183,8 +171,8 @@ export default function BetsSection() {
                       ].filter((o) => o.value !== null).map((odd) => (
                         <button
                           key={odd.type}
-                          onClick={() => addBet(event.id, odd.type, String(odd.value), `${event.home} — ${event.away}`, event.league, event.sport)}
-                          className={`odds-btn ${betSlip.some((b) => b.eventId === event.id && b.type === odd.type) ? "active" : ""}`}
+                          onClick={() => addBet({ eventId: event.id, type: odd.type, odds: String(odd.value), name: `${event.home} — ${event.away}`, league: event.league, sport: event.sport })}
+                          className={`odds-btn ${isSelected(event.id, odd.type) ? "active" : ""}`}
                         >
                           <span className="text-xs text-gray-400 block">{odd.label}</span>
                           <span className="font-bold">{odd.value}</span>
@@ -203,7 +191,7 @@ export default function BetsSection() {
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-oswald text-lg font-bold text-white">Купон ставок</h3>
             {betSlip.length > 0 && (
-              <button onClick={() => { setBetSlip([]); setStatus("idle"); }} className="text-gray-500 hover:text-red-400 transition-colors">
+              <button onClick={() => { clearSlip(); setStatus("idle"); }} className="text-gray-500 hover:text-red-400 transition-colors">
                 <Icon name="Trash2" size={15} />
               </button>
             )}
@@ -234,7 +222,7 @@ export default function BetsSection() {
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       <span className="text-neon-green font-oswald font-bold">{b.odds}</span>
-                      <button onClick={() => setBetSlip((prev) => prev.filter((_, j) => j !== i))} className="text-gray-600 hover:text-red-400">
+                      <button onClick={() => removeBet(b.eventId, b.type)} className="text-gray-600 hover:text-red-400">
                         <Icon name="X" size={13} />
                       </button>
                     </div>

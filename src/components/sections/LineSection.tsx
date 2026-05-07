@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Icon from "@/components/ui/icon";
 import { getEvents, SportEvent } from "@/lib/events";
+import { useBetSlip } from "@/context/BetSlipContext";
 
 const SPORT_TABS = [
   { id: "Все",        emoji: "🏆", name: "Все" },
@@ -34,6 +35,7 @@ function MatchRowSkeleton() {
 }
 
 export default function LineSection() {
+  const { addBet, isSelected } = useBetSlip();
   const [activeSport, setActiveSport] = useState("Все");
   const [events, setEvents] = useState<SportEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -162,25 +164,25 @@ export default function LineSection() {
                         <div className="text-xs text-gray-600 font-roboto mt-1">{match.date}</div>
                       </div>
                       <div className="flex gap-1.5 flex-shrink-0">
-                        <button className="odds-btn py-1 px-2">
-                          <span className="text-xs text-gray-500 block">П1</span>
-                          <span className="font-bold text-sm">{match.odds.w1}</span>
-                        </button>
-                        {match.odds.x ? (
-                          <button className="odds-btn py-1 px-2">
-                            <span className="text-xs text-gray-500 block">X</span>
-                            <span className="font-bold text-sm">{match.odds.x}</span>
+                        {[
+                          { type: "w1", label: "П1", value: match.odds.w1 },
+                          { type: "x",  label: "X",  value: match.odds.x },
+                          { type: "w2", label: "П2", value: match.odds.w2 },
+                        ].map((odd) => odd.value ? (
+                          <button
+                            key={odd.type}
+                            onClick={() => addBet({ eventId: match.id, type: odd.type, odds: String(odd.value), name: `${match.home} — ${match.away}`, league: match.league, sport: match.sport })}
+                            className={`odds-btn py-1 px-2 ${isSelected(match.id, odd.type) ? "active" : ""}`}
+                          >
+                            <span className="text-xs text-gray-500 block">{odd.label}</span>
+                            <span className="font-bold text-sm">{odd.value}</span>
                           </button>
                         ) : (
-                          <div className="odds-btn py-1 px-2 opacity-30 cursor-default">
-                            <span className="text-xs text-gray-500 block">X</span>
+                          <div key={odd.type} className="odds-btn py-1 px-2 opacity-30 cursor-default">
+                            <span className="text-xs text-gray-500 block">{odd.label}</span>
                             <span className="font-bold text-sm text-gray-600">—</span>
                           </div>
-                        )}
-                        <button className="odds-btn py-1 px-2">
-                          <span className="text-xs text-gray-500 block">П2</span>
-                          <span className="font-bold text-sm">{match.odds.w2}</span>
-                        </button>
+                        ))}
                       </div>
                     </div>
 
@@ -192,23 +194,26 @@ export default function LineSection() {
                       <div className="col-span-2 text-center text-xs text-gray-500 font-roboto">
                         {match.date}
                       </div>
-                      <div className="col-span-1 flex justify-center">
-                        <button className="odds-btn w-full text-center py-1 text-sm font-bold">{match.odds.w1}</button>
-                      </div>
-                      <div className="col-span-1 flex justify-center">
-                        {match.odds.x ? (
-                          <button className="odds-btn w-full text-center py-1 text-sm font-bold">{match.odds.x}</button>
-                        ) : (
-                          <span className="text-gray-700 text-sm font-roboto w-full text-center block">—</span>
-                        )}
-                      </div>
-                      <div className="col-span-1 flex justify-center">
-                        <button className="odds-btn w-full text-center py-1 text-sm font-bold">{match.odds.w2}</button>
-                      </div>
+                      {[
+                        { type: "w1", value: match.odds.w1 },
+                        { type: "x",  value: match.odds.x },
+                        { type: "w2", value: match.odds.w2 },
+                      ].map((odd) => (
+                        <div key={odd.type} className="col-span-1 flex justify-center">
+                          {odd.value ? (
+                            <button
+                              onClick={() => addBet({ eventId: match.id, type: odd.type, odds: String(odd.value), name: `${match.home} — ${match.away}`, league: match.league, sport: match.sport })}
+                              className={`odds-btn w-full text-center py-1 text-sm font-bold ${isSelected(match.id, odd.type) ? "active" : ""}`}
+                            >
+                              {odd.value}
+                            </button>
+                          ) : (
+                            <span className="text-gray-700 text-sm font-roboto w-full text-center block">—</span>
+                          )}
+                        </div>
+                      ))}
                       <div className="col-span-2 flex justify-end">
-                        <span className="text-xs text-gray-600 font-roboto px-2 py-0.5 rounded border border-sport-border">
-                          +{Math.floor(Math.random() * 30 + 5)}
-                        </span>
+                        <span className="text-xs text-gray-600 font-roboto px-2 py-0.5 rounded border border-sport-border">+15</span>
                       </div>
                     </div>
                   </div>

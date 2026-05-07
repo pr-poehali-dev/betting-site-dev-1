@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import Icon from "@/components/ui/icon";
 import PendingBetsWidget from "@/components/PendingBetsWidget";
 import { getEvents, SportEvent } from "@/lib/events";
+import { useBetSlip } from "@/context/BetSlipContext";
 
 interface HomeSectionProps {
   onNav: (section: string) => void;
@@ -45,6 +46,7 @@ function MatchSkeleton() {
 }
 
 export default function HomeSection({ onNav }: HomeSectionProps) {
+  const { addBet, isSelected } = useBetSlip();
   const [topMatches, setTopMatches] = useState<SportEvent[]>([]);
   const [allEvents, setAllEvents] = useState<SportEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -182,7 +184,7 @@ export default function HomeSection({ onNav }: HomeSectionProps) {
             </div>
           ) : (
             topMatches.map((match, i) => (
-              <div key={match.id} className="glass-card rounded-lg p-4 neon-border cursor-pointer" onClick={() => onNav("bets")}>
+              <div key={match.id} className="glass-card rounded-lg p-4 neon-border">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
                     <span className="text-base">{match.sport}</span>
@@ -195,18 +197,27 @@ export default function HomeSection({ onNav }: HomeSectionProps) {
                   </div>
                   <span className="text-gray-500 text-xs">{match.date}</span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between flex-wrap gap-2">
                   <div className="font-oswald text-sm md:text-base font-medium text-white">
                     <span>{match.home}</span>
                     <span className="text-gray-600 mx-2">—</span>
                     <span>{match.away}</span>
                   </div>
                   <div className="flex gap-2">
-                    <button className="odds-btn" onClick={(e) => { e.stopPropagation(); onNav("bets"); }}>П1 {match.odds.w1}</button>
-                    {match.odds.x && (
-                      <button className="odds-btn hidden sm:block" onClick={(e) => { e.stopPropagation(); onNav("bets"); }}>X {match.odds.x}</button>
-                    )}
-                    <button className="odds-btn" onClick={(e) => { e.stopPropagation(); onNav("bets"); }}>П2 {match.odds.w2}</button>
+                    {[
+                      { type: "w1", label: "П1", value: match.odds.w1 },
+                      { type: "x",  label: "X",  value: match.odds.x },
+                      { type: "w2", label: "П2", value: match.odds.w2 },
+                    ].filter((o) => o.value !== null).map((odd) => (
+                      <button
+                        key={odd.type}
+                        onClick={() => addBet({ eventId: match.id, type: odd.type, odds: String(odd.value), name: `${match.home} — ${match.away}`, league: match.league, sport: match.sport })}
+                        className={`odds-btn ${isSelected(match.id, odd.type) ? "active" : ""}`}
+                      >
+                        <span className="text-xs text-gray-400 block">{odd.label}</span>
+                        <span className="font-bold">{odd.value}</span>
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
