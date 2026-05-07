@@ -3,8 +3,9 @@ import Icon from "@/components/ui/icon";
 import { useAuth } from "@/context/AuthContext";
 import { placeBet, BetItem } from "@/lib/bets";
 import { settleWithPush } from "@/lib/notifications";
-import { getEvents, SportEvent, EventMarket } from "@/lib/events";
+import { getEvents, SportEvent } from "@/lib/events";
 import { useBetSlip } from "@/context/BetSlipContext";
+import { getMarketsForEvent } from "@/lib/markets";
 import AuthModal from "@/components/AuthModal";
 
 const categories = ["Все", "Футбол", "Баскетбол", "Теннис", "Хоккей", "ММА"];
@@ -18,80 +19,113 @@ interface EventCardProps {
 }
 
 function EventCard({ event, addBet, isSelected }: EventCardProps) {
-  const markets: EventMarket[] = event.markets && event.markets.length > 0
-    ? event.markets
-    : [{
-        key: "h2h",
-        label: "Основное время",
-        type: "h2h",
-        outcomes: [
-          ...(event.odds.w1 ? [{ type: "w1", label: "П1", odds: event.odds.w1 }] : []),
-          ...(event.odds.x  ? [{ type: "x",  label: "X",  odds: event.odds.x  }] : []),
-          ...(event.odds.w2 ? [{ type: "w2", label: "П2", odds: event.odds.w2 }] : []),
-        ],
-      }];
+  const [expanded, setExpanded] = useState(false);
+  const [activeMarket, setActiveMarket] = useState("h2h");
 
-  const [activeMarket, setActiveMarket] = useState(markets[0]?.key ?? "h2h");
-  const currentMarket = markets.find((m) => m.key === activeMarket) ?? markets[0];
+  const allMarkets = getMarketsForEvent(event);
+  const currentMarket = allMarkets.find(m => m.key === activeMarket) ?? allMarkets[0];
+
+  // Первые 3 исхода основного рынка для компактного вида
+  const mainMarket = allMarkets[0];
 
   return (
-    <div className="glass-card rounded-lg p-4 neon-border">
-      {/* Шапка */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <span className="text-lg">{event.sport}</span>
-          <span className="text-gray-500 text-xs font-roboto">{event.league}</span>
+    <div className="glass-card rounded-lg neon-border overflow-hidden">
+      {/* Компактная шапка — всегда видна */}
+      <div className="p-4">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <span className="text-base">{event.sport}</span>
+            <span className="text-gray-500 text-xs font-roboto">{event.league}</span>
+          </div>
+          <span className="text-gray-500 text-xs">{event.date}</span>
         </div>
-        <span className="text-gray-500 text-xs">{event.date}</span>
+
+        <div className="flex items-center justify-between gap-3">
+          <div className="font-oswald font-medium text-white text-sm flex-1 min-w-0">
+            <span>{event.home}</span>
+            <span className="text-gray-600 mx-1.5">—</span>
+            <span>{event.away}</span>
+          </div>
+
+          {/* Основные коэффициенты (компактно) */}
+          <div className="flex gap-1 flex-shrink-0">
+            {mainMarket?.outcomes.slice(0, 3).map((outcome) => (
+              <button
+                key={outcome.type}
+                onClick={() => addBet({
+                  eventId: `${event.id}_h2h`,
+                  type: outcome.type,
+                  odds: String(outcome.odds),
+                  name: `${event.home} — ${event.away}`,
+                  league: event.league,
+                  sport: event.sport,
+                })}
+                className={`odds-btn min-w-[46px] ${isSelected(`${event.id}_h2h`, outcome.type) ? "active" : ""}`}
+              >
+                <span className="text-[10px] text-gray-400 block leading-none">{outcome.label}</span>
+                <span className="font-bold text-sm">{outcome.odds}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Кнопка раскрытия */}
+          <button
+            onClick={() => setExpanded(v => !v)}
+            className="flex items-center gap-1 text-xs text-gray-500 hover:text-neon-green transition-colors flex-shrink-0 font-roboto px-2 py-1 rounded"
+            style={{ border: "1px solid #1A2430", background: "rgba(255,255,255,0.03)" }}
+          >
+            <span className="hidden sm:inline">{expanded ? "Свернуть" : "Все ставки"}</span>
+            <span className="text-neon-green font-oswald font-bold text-xs">+{allMarkets.length}</span>
+            <Icon name={expanded ? "ChevronUp" : "ChevronDown"} size={12} />
+          </button>
+        </div>
       </div>
 
-      {/* Команды */}
-      <div className="font-oswald font-medium text-white mb-3">
-        <span>{event.home}</span>
-        <span className="text-gray-600 mx-2">—</span>
-        <span>{event.away}</span>
-      </div>
+      {/* Развёрнутый блок со всеми рынками */}
+      {expanded && (
+        <div style={{ borderTop: "1px solid #1A2430", background: "rgba(0,0,0,0.2)" }}>
+          {/* Табы рынков */}
+          <div className="flex gap-1 overflow-x-auto scrollbar-none px-4 pt-3 pb-2">
+            {allMarkets.map((m) => (
+              <button
+                key={m.key}
+                onClick={() => setActiveMarket(m.key)}
+                className={`flex-shrink-0 text-xs px-2.5 py-1 rounded-full font-roboto whitespace-nowrap transition-all ${
+                  activeMarket === m.key
+                    ? "bg-neon-green text-sport-dark font-medium"
+                    : "text-gray-500 hover:text-white"
+                }`}
+                style={activeMarket !== m.key ? { background: "rgba(255,255,255,0.04)", border: "1px solid #1A2430" } : {}}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
 
-      {/* Табы маркетов (если больше одного) */}
-      {markets.length > 1 && (
-        <div className="flex gap-1 overflow-x-auto scrollbar-none mb-3 pb-0.5">
-          {markets.map((m) => (
-            <button
-              key={m.key}
-              onClick={() => setActiveMarket(m.key)}
-              className={`flex-shrink-0 text-xs px-2.5 py-1 rounded-full font-roboto transition-all ${
-                activeMarket === m.key
-                  ? "bg-neon-green text-sport-dark font-medium"
-                  : "text-gray-500 hover:text-white"
-              }`}
-              style={activeMarket !== m.key ? { background: "rgba(255,255,255,0.04)", border: "1px solid #1A2430" } : {}}
-            >
-              {m.label}
-            </button>
-          ))}
+          {/* Коэффициенты выбранного рынка */}
+          <div className="px-4 pb-4">
+            <div className="flex gap-1.5 flex-wrap">
+              {currentMarket?.outcomes.map((outcome) => (
+                <button
+                  key={outcome.type}
+                  onClick={() => addBet({
+                    eventId: `${event.id}_${activeMarket}`,
+                    type: outcome.type,
+                    odds: String(outcome.odds),
+                    name: `${event.home} — ${event.away} · ${currentMarket.label}`,
+                    league: event.league,
+                    sport: event.sport,
+                  })}
+                  className={`odds-btn flex-1 min-w-[64px] ${isSelected(`${event.id}_${activeMarket}`, outcome.type) ? "active" : ""}`}
+                >
+                  <span className="text-xs text-gray-400 block leading-none mb-0.5">{outcome.label}</span>
+                  <span className="font-bold">{outcome.odds}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
-
-      {/* Коэффициенты текущего маркета */}
-      <div className="flex gap-1.5 flex-wrap">
-        {currentMarket?.outcomes.map((outcome) => (
-          <button
-            key={outcome.type}
-            onClick={() => addBet({
-              eventId: `${event.id}_${activeMarket}`,
-              type: outcome.type,
-              odds: String(outcome.odds),
-              name: `${event.home} — ${event.away} (${currentMarket.label})`,
-              league: event.league,
-              sport: event.sport,
-            })}
-            className={`odds-btn flex-1 min-w-[52px] ${isSelected(`${event.id}_${activeMarket}`, outcome.type) ? "active" : ""}`}
-          >
-            <span className="text-xs text-gray-400 block leading-none mb-0.5">{outcome.label}</span>
-            <span className="font-bold">{outcome.odds}</span>
-          </button>
-        ))}
-      </div>
     </div>
   );
 }
