@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Icon from "@/components/ui/icon";
+import { useAuth } from "@/context/AuthContext";
 
 interface HeaderProps {
   activeSection: string;
@@ -17,6 +18,7 @@ const navItems = [
 
 export default function Header({ activeSection, onNav }: HeaderProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { pendingCount } = useAuth();
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 glass-card border-b border-sport-border">
@@ -41,12 +43,20 @@ export default function Header({ activeSection, onNav }: HeaderProps) {
             <button
               key={item.id}
               onClick={() => onNav(item.id)}
-              className={`nav-item flex items-center gap-1.5 ${activeSection === item.id ? "active" : ""}`}
+              className={`nav-item flex items-center gap-1.5 relative ${activeSection === item.id ? "active" : ""}`}
             >
               {item.id === "live" && (
                 <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
               )}
               {item.label}
+              {item.id === "bets" && pendingCount > 0 && (
+                <span
+                  className="min-w-[16px] h-4 rounded-full flex items-center justify-center text-[10px] font-oswald font-bold text-sport-dark px-1"
+                  style={{ background: "#00FF87", boxShadow: "0 0 6px rgba(0,255,135,0.6)" }}
+                >
+                  {pendingCount > 9 ? "9+" : pendingCount}
+                </span>
+              )}
             </button>
           ))}
         </nav>
