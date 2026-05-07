@@ -19,7 +19,7 @@ JWT_ALGO = "HS256"
 CORS = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Authorization",
     "Content-Type": "application/json",
 }
 
@@ -29,10 +29,15 @@ def get_conn():
 
 
 def get_user_id(event: dict) -> int:
-    auth = event.get("headers", {}).get("X-Authorization", "")
+    headers = event.get("headers", {})
+    # Платформа переименовывает Authorization → X-Authorization
+    auth = headers.get("X-Authorization", "") or headers.get("Authorization", "")
     if not auth.startswith("Bearer "):
         raise PermissionError("Токен не передан")
-    payload = jwt.decode(auth[7:], JWT_SECRET, algorithms=[JWT_ALGO])
+    token = auth[7:].strip()
+    if not token or token == "null":
+        raise PermissionError("Токен пустой")
+    payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGO])
     return payload["sub"]
 
 

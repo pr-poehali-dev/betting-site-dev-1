@@ -23,8 +23,13 @@ export interface VerifySubmit {
   selfie_photo: string;
 }
 
-function authHeaders() {
-  return { "Content-Type": "application/json", Authorization: `Bearer ${getToken()}` };
+function authHeaders(): Record<string, string> {
+  const token = getToken();
+  return {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${token}`,
+    "X-Authorization": `Bearer ${token}`,
+  };
 }
 
 export async function getVerifyStatus(): Promise<VerifyStatus> {
