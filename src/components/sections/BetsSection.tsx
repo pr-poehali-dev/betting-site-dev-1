@@ -3,13 +3,98 @@ import Icon from "@/components/ui/icon";
 import { useAuth } from "@/context/AuthContext";
 import { placeBet, BetItem } from "@/lib/bets";
 import { settleWithPush } from "@/lib/notifications";
-import { getEvents, SportEvent } from "@/lib/events";
+import { getEvents, SportEvent, EventMarket } from "@/lib/events";
 import { useBetSlip } from "@/context/BetSlipContext";
 import AuthModal from "@/components/AuthModal";
 
 const categories = ["Все", "Футбол", "Баскетбол", "Теннис", "Хоккей", "ММА"];
 
 type BetStatus = "idle" | "loading" | "success" | "error";
+
+interface EventCardProps {
+  event: SportEvent;
+  addBet: (item: { eventId: string; type: string; odds: string; name: string; league: string; sport: string }) => void;
+  isSelected: (eventId: string, type: string) => boolean;
+}
+
+function EventCard({ event, addBet, isSelected }: EventCardProps) {
+  const markets: EventMarket[] = event.markets && event.markets.length > 0
+    ? event.markets
+    : [{
+        key: "h2h",
+        label: "Основное время",
+        type: "h2h",
+        outcomes: [
+          ...(event.odds.w1 ? [{ type: "w1", label: "П1", odds: event.odds.w1 }] : []),
+          ...(event.odds.x  ? [{ type: "x",  label: "X",  odds: event.odds.x  }] : []),
+          ...(event.odds.w2 ? [{ type: "w2", label: "П2", odds: event.odds.w2 }] : []),
+        ],
+      }];
+
+  const [activeMarket, setActiveMarket] = useState(markets[0]?.key ?? "h2h");
+  const currentMarket = markets.find((m) => m.key === activeMarket) ?? markets[0];
+
+  return (
+    <div className="glass-card rounded-lg p-4 neon-border">
+      {/* Шапка */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">{event.sport}</span>
+          <span className="text-gray-500 text-xs font-roboto">{event.league}</span>
+        </div>
+        <span className="text-gray-500 text-xs">{event.date}</span>
+      </div>
+
+      {/* Команды */}
+      <div className="font-oswald font-medium text-white mb-3">
+        <span>{event.home}</span>
+        <span className="text-gray-600 mx-2">—</span>
+        <span>{event.away}</span>
+      </div>
+
+      {/* Табы маркетов (если больше одного) */}
+      {markets.length > 1 && (
+        <div className="flex gap-1 overflow-x-auto scrollbar-none mb-3 pb-0.5">
+          {markets.map((m) => (
+            <button
+              key={m.key}
+              onClick={() => setActiveMarket(m.key)}
+              className={`flex-shrink-0 text-xs px-2.5 py-1 rounded-full font-roboto transition-all ${
+                activeMarket === m.key
+                  ? "bg-neon-green text-sport-dark font-medium"
+                  : "text-gray-500 hover:text-white"
+              }`}
+              style={activeMarket !== m.key ? { background: "rgba(255,255,255,0.04)", border: "1px solid #1A2430" } : {}}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Коэффициенты текущего маркета */}
+      <div className="flex gap-1.5 flex-wrap">
+        {currentMarket?.outcomes.map((outcome) => (
+          <button
+            key={outcome.type}
+            onClick={() => addBet({
+              eventId: `${event.id}_${activeMarket}`,
+              type: outcome.type,
+              odds: String(outcome.odds),
+              name: `${event.home} — ${event.away} (${currentMarket.label})`,
+              league: event.league,
+              sport: event.sport,
+            })}
+            className={`odds-btn flex-1 min-w-[52px] ${isSelected(`${event.id}_${activeMarket}`, outcome.type) ? "active" : ""}`}
+          >
+            <span className="text-xs text-gray-400 block leading-none mb-0.5">{outcome.label}</span>
+            <span className="font-bold">{outcome.odds}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function EventSkeleton() {
   return (
@@ -149,38 +234,12 @@ export default function BetsSection() {
               </div>
             ) : (
               filtered.map((event) => (
-                <div key={event.id} className="glass-card rounded-lg p-4 neon-border">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg">{event.sport}</span>
-                      <span className="text-gray-500 text-xs font-roboto">{event.league}</span>
-                    </div>
-                    <span className="text-gray-500 text-xs">{event.date}</span>
-                  </div>
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <div className="font-oswald font-medium text-white">
-                      <span>{event.home}</span>
-                      <span className="text-gray-600 mx-2">—</span>
-                      <span>{event.away}</span>
-                    </div>
-                    <div className="flex gap-1.5">
-                      {[
-                        { type: "w1", label: "П1", value: event.odds.w1 },
-                        { type: "x", label: "X", value: event.odds.x },
-                        { type: "w2", label: "П2", value: event.odds.w2 },
-                      ].filter((o) => o.value !== null).map((odd) => (
-                        <button
-                          key={odd.type}
-                          onClick={() => addBet({ eventId: event.id, type: odd.type, odds: String(odd.value), name: `${event.home} — ${event.away}`, league: event.league, sport: event.sport })}
-                          className={`odds-btn ${isSelected(event.id, odd.type) ? "active" : ""}`}
-                        >
-                          <span className="text-xs text-gray-400 block">{odd.label}</span>
-                          <span className="font-bold">{odd.value}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                <EventCard
+                  key={event.id}
+                  event={event}
+                  addBet={addBet}
+                  isSelected={isSelected}
+                />
               ))
             )}
           </div>

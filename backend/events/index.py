@@ -325,18 +325,81 @@ def translate_team(name: str) -> str:
     return name
 
 
+def _fb(id, sport, cat, league, home, away, date, w1, x, w2, extra_markets=None):
+    """Формирует fallback-событие со всеми маркетами."""
+    markets = [
+        {"key": "h2h", "label": "Основное время", "type": "h2h", "outcomes": [
+            {"type": "w1", "label": "П1", "odds": w1},
+            *([] if x is None else [{"type": "x", "label": "X", "odds": x}]),
+            {"type": "w2", "label": "П2", "odds": w2},
+        ]},
+    ]
+    if extra_markets:
+        markets.extend(extra_markets)
+    return {"id": id, "sport": sport, "category": cat, "league": league,
+            "home": home, "away": away, "date": date, "commence_time": "",
+            "odds": {"w1": w1, "x": x, "w2": w2}, "markets": markets, "is_live": False}
+
+FOOTBALL_EXTRA = [
+    {"key": "h2h_h1", "label": "1-й тайм", "type": "h2h", "outcomes": [
+        {"type": "w1", "label": "П1", "odds": 2.80},
+        {"type": "x",  "label": "X",  "odds": 2.10},
+        {"type": "w2", "label": "П2", "odds": 3.50},
+    ]},
+    {"key": "h2h_h2", "label": "2-й тайм", "type": "h2h", "outcomes": [
+        {"type": "w1", "label": "П1", "odds": 2.60},
+        {"type": "x",  "label": "X",  "odds": 2.20},
+        {"type": "w2", "label": "П2", "odds": 3.20},
+    ]},
+    {"key": "totals", "label": "Тотал", "type": "totals", "outcomes": [
+        {"type": "total_over",  "label": "Больше 2.5", "odds": 1.85},
+        {"type": "total_under", "label": "Меньше 2.5", "odds": 1.95},
+    ]},
+]
+NBA_EXTRA = [
+    {"key": "h2h_q1", "label": "1-я четверть", "type": "h2h", "outcomes": [
+        {"type": "w1", "label": "П1", "odds": 1.90},
+        {"type": "w2", "label": "П2", "odds": 1.90},
+    ]},
+    {"key": "h2h_q2", "label": "2-я четверть", "type": "h2h", "outcomes": [
+        {"type": "w1", "label": "П1", "odds": 1.88},
+        {"type": "w2", "label": "П2", "odds": 1.92},
+    ]},
+    {"key": "totals", "label": "Тотал", "type": "totals", "outcomes": [
+        {"type": "total_over",  "label": "Больше 220.5", "odds": 1.90},
+        {"type": "total_under", "label": "Меньше 220.5", "odds": 1.90},
+    ]},
+]
+HOCKEY_EXTRA = [
+    {"key": "h2h_p1", "label": "1-й период", "type": "h2h", "outcomes": [
+        {"type": "w1", "label": "П1", "odds": 2.20},
+        {"type": "x",  "label": "X",  "odds": 1.80},
+        {"type": "w2", "label": "П2", "odds": 3.10},
+    ]},
+    {"key": "h2h_p2", "label": "2-й период", "type": "h2h", "outcomes": [
+        {"type": "w1", "label": "П1", "odds": 2.10},
+        {"type": "x",  "label": "X",  "odds": 1.85},
+        {"type": "w2", "label": "П2", "odds": 3.00},
+    ]},
+    {"key": "h2h_p3", "label": "3-й период", "type": "h2h", "outcomes": [
+        {"type": "w1", "label": "П1", "odds": 2.30},
+        {"type": "x",  "label": "X",  "odds": 1.90},
+        {"type": "w2", "label": "П2", "odds": 2.80},
+    ]},
+]
+
 # Резервные события на случай если нет API ключа или лимит исчерпан
 FALLBACK_EVENTS = [
-    {"id": "fb1", "sport": "⚽", "category": "Футбол", "league": "Лига чемпионов", "home": "Реал Мадрид", "away": "Бавария", "date": "Сег. 21:00", "commence_time": "", "odds": {"w1": 2.10, "x": 3.50, "w2": 3.40}, "is_live": False},
-    {"id": "fb2", "sport": "⚽", "category": "Футбол", "league": "АПЛ", "home": "Манчестер Сити", "away": "Арсенал", "date": "Завт. 18:30", "commence_time": "", "odds": {"w1": 1.85, "x": 3.60, "w2": 4.20}, "is_live": False},
-    {"id": "fb3", "sport": "⚽", "category": "Футбол", "league": "Ла Лига", "home": "Барселона", "away": "Атлетико", "date": "Завт. 22:00", "commence_time": "", "odds": {"w1": 2.05, "x": 3.40, "w2": 3.60}, "is_live": False},
-    {"id": "fb4", "sport": "🏀", "category": "Баскетбол", "league": "НБА", "home": "Голден Стейт", "away": "Бостон", "date": "Сег. 02:30", "commence_time": "", "odds": {"w1": 1.90, "x": None, "w2": 1.95}, "is_live": False},
-    {"id": "fb5", "sport": "🏀", "category": "Баскетбол", "league": "НБА", "home": "Лейкерс", "away": "Клипперс", "date": "Завт. 04:00", "commence_time": "", "odds": {"w1": 2.15, "x": None, "w2": 1.75}, "is_live": False},
-    {"id": "fb6", "sport": "🎾", "category": "Теннис", "league": "Ролан Гаррос", "home": "Синнер", "away": "Алькарас", "date": "Сег. 14:00", "commence_time": "", "odds": {"w1": 1.85, "x": None, "w2": 2.00}, "is_live": False},
-    {"id": "fb7", "sport": "🏒", "category": "Хоккей", "league": "НХЛ Плей-офф", "home": "Авалэнш", "away": "Ойлерз", "date": "Завт. 03:00", "commence_time": "", "odds": {"w1": 1.80, "x": 3.80, "w2": 2.10}, "is_live": False},
-    {"id": "fb8", "sport": "🥊", "category": "ММА", "league": "UFC", "home": "Адесанья", "away": "Дю Плесси", "date": "Суб. 04:00", "commence_time": "", "odds": {"w1": 2.20, "x": None, "w2": 1.70}, "is_live": False},
-    {"id": "fb9", "sport": "⚽", "category": "Футбол", "league": "Серия А", "home": "Интер", "away": "Ювентус", "date": "Сег. 20:45", "commence_time": "", "odds": {"w1": 2.40, "x": 3.20, "w2": 3.00}, "is_live": False},
-    {"id": "fb10", "sport": "⚽", "category": "Футбол", "league": "Бундеслига", "home": "Бавария", "away": "Боруссия Д", "date": "Завт. 17:30", "commence_time": "", "odds": {"w1": 1.70, "x": 3.80, "w2": 5.00}, "is_live": False},
+    _fb("fb1",  "⚽", "Футбол",    "Лига чемпионов", "Реал Мадрид",    "Бавария",      "Сег. 21:00", 2.10, 3.50, 3.40, FOOTBALL_EXTRA),
+    _fb("fb2",  "⚽", "Футбол",    "АПЛ",            "Манчестер Сити", "Арсенал",      "Завт. 18:30",1.85, 3.60, 4.20, FOOTBALL_EXTRA),
+    _fb("fb3",  "⚽", "Футбол",    "Ла Лига",        "Барселона",      "Атлетико",     "Завт. 22:00",2.05, 3.40, 3.60, FOOTBALL_EXTRA),
+    _fb("fb4",  "🏀", "Баскетбол", "НБА",            "Голден Стейт",  "Бостон",       "Сег. 02:30", 1.90, None, 1.95, NBA_EXTRA),
+    _fb("fb5",  "🏀", "Баскетбол", "НБА",            "Лейкерс",       "Клипперс",     "Завт. 04:00",2.15, None, 1.75, NBA_EXTRA),
+    _fb("fb6",  "🎾", "Теннис",    "Ролан Гаррос",   "Синнер",        "Алькарас",     "Сег. 14:00", 1.85, None, 2.00),
+    _fb("fb7",  "🏒", "Хоккей",    "НХЛ Плей-офф",  "Авалэнш",       "Ойлерз",       "Завт. 03:00",1.80, 3.80, 2.10, HOCKEY_EXTRA),
+    _fb("fb8",  "🥊", "ММА",       "UFC",            "Адесанья",      "Дю Плесси",    "Суб. 04:00", 2.20, None, 1.70),
+    _fb("fb9",  "⚽", "Футбол",    "Серия А",        "Интер",         "Ювентус",      "Сег. 20:45", 2.40, 3.20, 3.00, FOOTBALL_EXTRA),
+    _fb("fb10", "⚽", "Футбол",    "Бундеслига",     "Бавария",       "Боруссия Д",   "Завт. 17:30",1.70, 3.80, 5.00, FOOTBALL_EXTRA),
 ]
 
 
@@ -397,18 +460,28 @@ def format_date(commence_time: str) -> str:
         return commence_time[:10]
 
 
-def fetch_odds_api(sport_key: str, api_key: str, live: bool = False) -> list:
-    in_play = "true" if live else "false"
-    params = urllib.parse.urlencode({
-        "apiKey": api_key,
-        "regions": "eu",
-        "markets": "h2h",
-        "oddsFormat": "decimal",
-        "dateFormat": "iso",
-        "commenceTimeFrom": "",
-    })
-    # Убираем пустые параметры
-    params = f"apiKey={api_key}&regions=eu&markets=h2h&oddsFormat=decimal&dateFormat=iso"
+# Маркеты запрашиваем по одному (free plan ограничивает один market за раз)
+EXTRA_MARKETS = ["h2h_h1", "h2h_h2", "totals", "spreads"]
+
+# Названия маркетов на русском
+MARKET_LABELS = {
+    "h2h":       "Основное время",
+    "h2h_h1":    "1-й тайм",
+    "h2h_h2":    "2-й тайм",
+    "totals":    "Тотал",
+    "spreads":   "Фора",
+    "h2h_q1":   "1-я четверть",
+    "h2h_q2":   "2-я четверть",
+    "h2h_q3":   "3-я четверть",
+    "h2h_q4":   "4-я четверть",
+    "h2h_p1":   "1-й период",
+    "h2h_p2":   "2-й период",
+    "h2h_p3":   "3-й период",
+}
+
+
+def fetch_odds_api(sport_key: str, api_key: str, market: str = "h2h", live: bool = False) -> list:
+    params = f"apiKey={api_key}&regions=eu&markets={market}&oddsFormat=decimal&dateFormat=iso"
     if live:
         params += "&inplay=true"
 
@@ -418,38 +491,103 @@ def fetch_odds_api(sport_key: str, api_key: str, live: bool = False) -> list:
         return json.loads(resp.read().decode())
 
 
+def parse_market(market: dict, home_en: str, away_en: str) -> dict | None:
+    """Парсит один рынок и возвращает структуру с исходами."""
+    key = market.get("key", "")
+    outcomes_raw = market.get("outcomes", [])
+    if not outcomes_raw:
+        return None
+
+    if key in ("h2h", "h2h_h1", "h2h_h2", "h2h_q1", "h2h_q2", "h2h_q3", "h2h_q4", "h2h_p1", "h2h_p2", "h2h_p3"):
+        # Победа/ничья/победа
+        prices = {o["name"]: o["price"] for o in outcomes_raw}
+        w1 = prices.get(home_en)
+        w2 = prices.get(away_en)
+        if not w1 or not w2:
+            return None
+        draw_keys = [k for k in prices if k not in (home_en, away_en)]
+        x = prices.get(draw_keys[0]) if draw_keys else None
+        return {
+            "key": key,
+            "label": MARKET_LABELS.get(key, key),
+            "type": "h2h",
+            "outcomes": [
+                {"type": "w1", "label": "П1", "odds": round(float(w1), 2)},
+                *([] if not x else [{"type": "x", "label": "X", "odds": round(float(x), 2)}]),
+                {"type": "w2", "label": "П2", "odds": round(float(w2), 2)},
+            ],
+        }
+
+    elif key == "totals":
+        # Тотал: Over/Under
+        result = {"key": key, "label": MARKET_LABELS.get(key, key), "type": "totals", "outcomes": []}
+        for o in outcomes_raw[:2]:
+            point = o.get("point", "")
+            name = "Больше" if o["name"] == "Over" else "Меньше"
+            result["outcomes"].append({
+                "type": f"total_{o['name'].lower()}",
+                "label": f"{name} {point}",
+                "odds": round(float(o["price"]), 2),
+            })
+        return result if result["outcomes"] else None
+
+    elif key == "spreads":
+        # Фора
+        result = {"key": key, "label": MARKET_LABELS.get(key, key), "type": "spreads", "outcomes": []}
+        for o in outcomes_raw[:2]:
+            point = o.get("point", 0)
+            sign = "+" if float(point) > 0 else ""
+            team = translate_team(o["name"])
+            result["outcomes"].append({
+                "type": f"spread_{o['name'].lower().replace(' ', '_')}",
+                "label": f"{team} ({sign}{point})",
+                "odds": round(float(o["price"]), 2),
+            })
+        return result if result["outcomes"] else None
+
+    return None
+
+
 def parse_event(raw: dict, sport_meta: dict) -> dict | None:
     bookmakers = raw.get("bookmakers", [])
     if not bookmakers:
         return None
 
-    # Берём первый букмекер с рынком h2h
-    h2h = None
-    for bm in bookmakers:
-        for market in bm.get("markets", []):
-            if market.get("key") == "h2h":
-                h2h = market
-                break
-        if h2h:
-            break
-
-    if not h2h:
-        return None
-
-    outcomes = {o["name"]: o["price"] for o in h2h.get("outcomes", [])}
     home_en = raw.get("home_team", "")
     away_en = raw.get("away_team", "")
 
-    w1 = outcomes.get(home_en)
-    w2 = outcomes.get(away_en)
-    draw_teams = [k for k in outcomes if k not in (home_en, away_en)]
-    x = outcomes.get(draw_teams[0]) if draw_teams else None
+    # Собираем все маркеты из всех букмекеров (берём первый попавшийся для каждого market key)
+    markets_by_key: dict[str, dict] = {}
+    for bm in bookmakers:
+        for market in bm.get("markets", []):
+            mk = market.get("key", "")
+            if mk not in markets_by_key:
+                markets_by_key[mk] = market
 
-    if not w1 or not w2:
+    if "h2h" not in markets_by_key:
+        return None
+
+    # Парсим основной h2h для получения базовых коэффициентов
+    main = parse_market(markets_by_key["h2h"], home_en, away_en)
+    if not main:
         return None
 
     home = translate_team(home_en)
     away = translate_team(away_en)
+
+    # Основные коэффициенты (для обратной совместимости)
+    w1 = next((o["odds"] for o in main["outcomes"] if o["type"] == "w1"), None)
+    x  = next((o["odds"] for o in main["outcomes"] if o["type"] == "x"), None)
+    w2 = next((o["odds"] for o in main["outcomes"] if o["type"] == "w2"), None)
+
+    # Парсим все доступные маркеты
+    all_markets = []
+    for mk_key in ["h2h", "h2h_h1", "h2h_h2", "h2h_p1", "h2h_p2", "h2h_p3",
+                   "h2h_q1", "h2h_q2", "h2h_q3", "h2h_q4", "totals", "spreads"]:
+        if mk_key in markets_by_key:
+            parsed = parse_market(markets_by_key[mk_key], home_en, away_en)
+            if parsed:
+                all_markets.append(parsed)
 
     return {
         "id": raw.get("id", ""),
@@ -461,10 +599,11 @@ def parse_event(raw: dict, sport_meta: dict) -> dict | None:
         "date": format_date(raw.get("commence_time", "")),
         "commence_time": raw.get("commence_time", ""),
         "odds": {
-            "w1": round(float(w1), 2),
-            "x": round(float(x), 2) if x else None,
-            "w2": round(float(w2), 2),
+            "w1": w1,
+            "x": x,
+            "w2": w2,
         },
+        "markets": all_markets,
         "is_live": raw.get("is_live", False),
     }
 
@@ -472,19 +611,51 @@ def parse_event(raw: dict, sport_meta: dict) -> dict | None:
 def fetch_all_events(api_key: str, live: bool = False) -> list:
     import sys
     events = []
+
     for sport_key, meta in SPORTS_MAP.items():
         try:
-            raw_events = fetch_odds_api(sport_key, api_key, live=live)
+            # Шаг 1: получаем основной h2h
+            raw_events = fetch_odds_api(sport_key, api_key, market="h2h", live=live)
             print(f"[events] {sport_key}: got {len(raw_events)} events", file=sys.stderr)
-            for raw in raw_events[:6]:
+
+            # Индексируем по event_id для быстрого поиска
+            raw_by_id = {r["id"]: r for r in raw_events[:6]}
+            if not raw_by_id:
+                continue
+
+            # Шаг 2: пробуем дополнить каждый вид спорта дополнительными маркетами
+            for extra_market in EXTRA_MARKETS:
+                try:
+                    extra_events = fetch_odds_api(sport_key, api_key, market=extra_market, live=live)
+                    for er in extra_events:
+                        eid = er.get("id", "")
+                        if eid in raw_by_id:
+                            # Мёржим букмекеров
+                            existing_bm_keys = {
+                                mk.get("key") for bm in raw_by_id[eid].get("bookmakers", [])
+                                for mk in bm.get("markets", [])
+                            }
+                            for bm in er.get("bookmakers", []):
+                                for mk in bm.get("markets", []):
+                                    if mk.get("key") not in existing_bm_keys:
+                                        if raw_by_id[eid].get("bookmakers"):
+                                            raw_by_id[eid]["bookmakers"][0].setdefault("markets", []).append(mk)
+                except Exception as e2:
+                    print(f"[events] {sport_key}/{extra_market} error: {e2}", file=sys.stderr)
+                    continue
+
+            # Шаг 3: парсим обогащённые события
+            for raw in raw_by_id.values():
                 parsed = parse_event(raw, meta)
                 if parsed:
                     events.append(parsed)
+
         except Exception as e:
             print(f"[events] {sport_key} error: {e}", file=sys.stderr)
             continue
         if len(events) >= 50:
             break
+
     print(f"[events] total parsed: {len(events)}", file=sys.stderr)
     return events
 

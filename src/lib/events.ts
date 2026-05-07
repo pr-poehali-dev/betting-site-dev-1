@@ -1,5 +1,18 @@
 const EVENTS_URL = "https://functions.poehali.dev/2371e65f-94f3-4f73-ae3e-5d0e5c4081c4";
 
+export interface MarketOutcome {
+  type: string;
+  label: string;
+  odds: number;
+}
+
+export interface EventMarket {
+  key: string;
+  label: string;
+  type: string;
+  outcomes: MarketOutcome[];
+}
+
 export interface SportEvent {
   id: string;
   sport: string;
@@ -9,7 +22,8 @@ export interface SportEvent {
   away: string;
   date: string;
   commence_time: string;
-  odds: { w1: number; x: number | null; w2: number };
+  odds: { w1: number | null; x: number | null; w2: number | null };
+  markets?: EventMarket[];
   is_live: boolean;
 }
 
