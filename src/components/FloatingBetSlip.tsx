@@ -14,7 +14,7 @@ export default function FloatingBetSlip({ onOpen }: Props) {
 
   return (
     <div
-      className="fixed bottom-20 md:bottom-6 right-4 z-[150] animate-fade-in"
+      className="fixed bottom-20 md:bottom-6 right-4 z-[150] flex items-center gap-1 animate-fade-in"
       style={{ opacity: 0, animationFillMode: "forwards" }}
     >
       <button
@@ -24,9 +24,7 @@ export default function FloatingBetSlip({ onOpen }: Props) {
       >
         <div className="relative">
           <Icon name="TicketCheck" size={22} />
-          <span
-            className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-sport-dark text-neon-green text-[10px] flex items-center justify-center font-bold"
-          >
+          <span className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-sport-dark text-neon-green text-[10px] flex items-center justify-center font-bold">
             {betSlip.length}
           </span>
         </div>
@@ -34,12 +32,13 @@ export default function FloatingBetSlip({ onOpen }: Props) {
           <div className="text-xs leading-none opacity-70">Купон ставок</div>
           <div className="text-sm leading-tight">Коэф. {totalOdds.toFixed(2)}</div>
         </div>
-        <button
-          onClick={(e) => { e.stopPropagation(); clearSlip(); }}
-          className="ml-1 opacity-60 hover:opacity-100 transition-opacity"
-        >
-          <Icon name="X" size={14} />
-        </button>
+      </button>
+      <button
+        onClick={clearSlip}
+        className="w-8 h-8 flex items-center justify-center rounded-lg opacity-70 hover:opacity-100 transition-opacity"
+        style={{ background: "rgba(0,0,0,0.4)" }}
+      >
+        <Icon name="X" size={14} className="text-white" />
       </button>
     </div>
   );

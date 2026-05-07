@@ -143,8 +143,9 @@ export default function BetsSection() {
   }, []);
 
   useEffect(() => {
-    loadEvents();
-    const interval = setInterval(loadEvents, 5 * 60 * 1000);
+    // force=true при первом открытии — сбрасываем старый кэш без поля markets
+    loadEvents(true);
+    const interval = setInterval(() => loadEvents(), 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [loadEvents]);
 
