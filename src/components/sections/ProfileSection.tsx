@@ -8,17 +8,47 @@ import AuthModal from "@/components/AuthModal";
 const tabs = ["Профиль", "История", "Финансы", "Настройки"];
 
 const statusLabels: Record<string, string> = {
-  silver: "🥈 Silver",
-  gold: "⭐ Gold",
-  platinum: "💎 Platinum",
-  diamond: "🔷 Diamond",
+  bronze: "🥉 Бронза",
+  silver: "🥈 Серебро",
+  gold: "🥇 Золото",
+  platinum: "💎 Платина",
+  diamond: "👑 Бриллиант",
 };
 const statusColors: Record<string, { bg: string; text: string; border: string }> = {
-  silver: { bg: "rgba(192,192,192,0.1)", text: "#C0C0C0", border: "rgba(192,192,192,0.3)" },
-  gold: { bg: "rgba(255,215,0,0.1)", text: "#FFD700", border: "rgba(255,215,0,0.3)" },
-  platinum: { bg: "rgba(0,180,255,0.1)", text: "#00B4FF", border: "rgba(0,180,255,0.3)" },
-  diamond: { bg: "rgba(0,255,135,0.1)", text: "#00FF87", border: "rgba(0,255,135,0.3)" },
+  bronze:   { bg: "rgba(205,127,50,0.1)",  text: "#CD7F32", border: "rgba(205,127,50,0.3)" },
+  silver:   { bg: "rgba(192,192,192,0.1)", text: "#C0C0C0", border: "rgba(192,192,192,0.3)" },
+  gold:     { bg: "rgba(255,215,0,0.1)",   text: "#FFD700", border: "rgba(255,215,0,0.3)" },
+  platinum: { bg: "rgba(229,228,226,0.1)", text: "#E5E4E2", border: "rgba(229,228,226,0.3)" },
+  diamond:  { bg: "rgba(0,255,255,0.1)",   text: "#00FFFF", border: "rgba(0,255,255,0.3)" },
 };
+
+const LOYALTY_LEVELS = [
+  { id: "bronze",   icon: "🥉", name: "Бронза",    cashback: 5,  minBets: 0,   minAmount: 0,      color: "#CD7F32", nextColor: "#C0C0C0" },
+  { id: "silver",   icon: "🥈", name: "Серебро",   cashback: 10, minBets: 10,  minAmount: 5000,   color: "#C0C0C0", nextColor: "#FFD700" },
+  { id: "gold",     icon: "🥇", name: "Золото",    cashback: 15, minBets: 30,  minAmount: 25000,  color: "#FFD700", nextColor: "#E5E4E2" },
+  { id: "platinum", icon: "💎", name: "Платина",   cashback: 20, minBets: 100, minAmount: 100000, color: "#E5E4E2", nextColor: "#00FFFF" },
+  { id: "diamond",  icon: "👑", name: "Бриллиант", cashback: 30, minBets: 300, minAmount: 500000, color: "#00FFFF", nextColor: "#00FFFF" },
+];
+
+function getLevelByBets(totalBets: number) {
+  let current = LOYALTY_LEVELS[0];
+  for (const l of LOYALTY_LEVELS) {
+    if (totalBets >= l.minBets) current = l;
+  }
+  return current;
+}
+
+function getNextLevel(id: string) {
+  const idx = LOYALTY_LEVELS.findIndex(l => l.id === id);
+  return idx < LOYALTY_LEVELS.length - 1 ? LOYALTY_LEVELS[idx + 1] : null;
+}
+
+function getLevelProgress(totalBets: number, currentId: string) {
+  const next = getNextLevel(currentId);
+  if (!next) return 100;
+  const cur = LOYALTY_LEVELS.find(l => l.id === currentId)!;
+  return Math.min(Math.round((totalBets - cur.minBets) / Math.max(next.minBets - cur.minBets, 1) * 100), 100);
+}
 
 const betStatusMap = {
   pending: { label: "В игре", color: "text-yellow-400", bg: "bg-yellow-500/15" },
@@ -178,6 +208,9 @@ export default function ProfileSection() {
     ? new Date(user.created_at).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })
     : "—";
   const winRate = user.total_bets > 0 ? ((user.won_bets / user.total_bets) * 100).toFixed(0) : "—";
+  const userLevel = getLevelByBets(user.total_bets);
+  const nextLevel = getNextLevel(userLevel.id);
+  const levelProgress = getLevelProgress(user.total_bets, userLevel.id);
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -207,9 +240,9 @@ export default function ProfileSection() {
             <div className="flex items-center gap-2 mt-1 flex-wrap">
               <span
                 className="text-xs px-2 py-0.5 rounded-full font-oswald font-bold"
-                style={{ background: sc.bg, color: sc.text, border: `1px solid ${sc.border}` }}
+                style={{ background: `${userLevel.color}15`, color: userLevel.color, border: `1px solid ${userLevel.color}40` }}
               >
-                {statusLabels[user.status]}
+                {userLevel.icon} {userLevel.name} · {userLevel.cashback}% кэшбэк
               </span>
               <span className="text-xs text-gray-600">Рейтинг: {user.rating_points.toLocaleString()}</span>
             </div>
@@ -253,6 +286,81 @@ export default function ProfileSection() {
             <div className="text-gray-500 text-xs font-roboto mt-0.5">{stat.label}</div>
           </div>
         ))}
+      </div>
+
+      {/* Программа лояльности */}
+      <div className="glass-card rounded-xl overflow-hidden" style={{ border: `1px solid ${userLevel.color}40` }}>
+        {/* Шапка текущего уровня */}
+        <div className="p-5" style={{ background: `${userLevel.color}08` }}>
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <span className="text-3xl">{userLevel.icon}</span>
+              <div>
+                <div className="text-xs text-gray-500 font-roboto">Программа лояльности</div>
+                <div className="font-oswald text-xl font-bold" style={{ color: userLevel.color }}>{userLevel.name}</div>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-xs text-gray-500 font-roboto">Кэшбэк каждую неделю</div>
+              <div className="font-oswald text-3xl font-bold" style={{ color: userLevel.color }}>{userLevel.cashback}%</div>
+            </div>
+          </div>
+
+          {/* Прогресс до следующего уровня */}
+          <div className="mt-4">
+            <div className="flex justify-between text-xs font-roboto mb-1.5">
+              <span className="text-gray-500">
+                {nextLevel
+                  ? <>До уровня <span style={{ color: nextLevel.color }}>{nextLevel.icon} {nextLevel.name}</span></>
+                  : <span style={{ color: userLevel.color }}>👑 Максимальный уровень</span>}
+              </span>
+              <span className="text-gray-400">{user.total_bets} / {nextLevel?.minBets ?? user.total_bets} ставок</span>
+            </div>
+            <div className="h-2 rounded-full bg-sport-border overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-700"
+                style={{
+                  width: `${levelProgress}%`,
+                  background: nextLevel
+                    ? `linear-gradient(90deg, ${userLevel.color}, ${nextLevel.color})`
+                    : userLevel.color,
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Все уровни */}
+        <div className="grid grid-cols-5 divide-x divide-sport-border" style={{ borderTop: "1px solid #1A2430" }}>
+          {LOYALTY_LEVELS.map((level) => {
+            const isActive  = level.id === userLevel.id;
+            const isPassed  = LOYALTY_LEVELS.indexOf(level) < LOYALTY_LEVELS.indexOf(userLevel);
+            return (
+              <div
+                key={level.id}
+                className="flex flex-col items-center py-3 px-1 gap-1 transition-all"
+                style={{
+                  background: isActive ? `${level.color}10` : "transparent",
+                  opacity: !isActive && !isPassed ? 0.45 : 1,
+                }}
+              >
+                <span className="text-xl">{level.icon}</span>
+                <div className="font-oswald text-[10px] font-bold text-center leading-tight" style={{ color: level.color }}>
+                  {level.name}
+                </div>
+                <div className="font-oswald font-bold text-xs" style={{ color: isActive ? level.color : "#666" }}>
+                  {level.cashback}%
+                </div>
+                {isActive && (
+                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: level.color }} />
+                )}
+                {isPassed && (
+                  <Icon name="CheckCircle" size={12} style={{ color: level.color }} />
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Tabs */}
