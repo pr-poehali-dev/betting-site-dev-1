@@ -1,5 +1,5 @@
 """
-Push-уведомления БетСпорт.
+Push-уведомления БетСпорт. v2
 POST {action: "subscribe"}   — сохранить подписку браузера
 POST {action: "unsubscribe"} — удалить подписку
 POST {action: "send_settle"} — расчитать ставки и отправить push-уведомление
