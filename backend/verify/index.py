@@ -54,8 +54,9 @@ def get_user_id(event: dict, body: dict = None) -> int:
     token = auth[7:].strip()
     if not token or token == "null":
         raise PermissionError("Токен пустой")
-    payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGO])
-    return payload["sub"]
+    # options={"verify_sub": False} — sub может быть int (совместимость с auth/index.py)
+    payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGO], options={"verify_sub": False})
+    return int(payload["sub"])
 
 
 def get_s3():
