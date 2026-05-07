@@ -4,6 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import { getBetHistory, PlacedBet } from "@/lib/bets";
 import { settleWithPush, getPermission, subscribe, unsubscribe, getVapidPublicKey, registerSW } from "@/lib/notifications";
 import AuthModal from "@/components/AuthModal";
+import VerificationForm from "@/components/VerificationForm";
 
 const tabs = ["Профиль", "История", "Финансы", "Настройки"];
 
@@ -380,19 +381,20 @@ export default function ProfileSection() {
 
       {/* Профиль */}
       {activeTab === "Профиль" && (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {[
-            { label: "Логин", value: user.username },
-            { label: "Email", value: user.email },
-            { label: "Статус", value: statusLabels[user.status] },
+            { label: "Логин",            value: user.username },
+            { label: "Email",            value: user.email },
             { label: "Дата регистрации", value: createdDate },
-            { label: "Верификация", value: user.is_verified ? "✅ Подтверждён" : "⏳ Не пройдена" },
           ].map((field) => (
             <div key={field.label} className="glass-card rounded-lg px-4 py-3 flex justify-between items-center" style={{ border: "1px solid #1A2430" }}>
               <span className="text-gray-500 text-sm font-roboto">{field.label}</span>
               <span className="text-white font-oswald text-sm">{field.value}</span>
             </div>
           ))}
+
+          {/* Блок верификации */}
+          <VerificationForm onStatusChange={refreshUser} />
         </div>
       )}
 

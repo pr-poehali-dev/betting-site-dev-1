@@ -1,0 +1,12 @@
+{
+  "tests": [
+    {
+      "name": "Get verification status - unauthorized",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 401,
+      "expectedBody": {"error": "Необходима авторизация"},
+      "bodyMatcher": "partial"
+    }
+  ]
+}
